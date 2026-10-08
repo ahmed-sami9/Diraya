@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 
-import { verifyAccessToken, isInvalidTokenError } from './auth.token';
+import { verifyAccessToken, isInvalidTokenError } from './session/auth.token';
 
 import { AUTH_COOKIE_NAME } from './auth.cookie';
 
-import { validateAndTouchTeacherSession } from './auth.session.repository';
+import { validateAndTouchTeacherSession } from './session/auth.session.repository';
 
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');

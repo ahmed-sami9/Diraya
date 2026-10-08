@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { startTeacherSession } from '../auth/auth.session.service';
+import { startTeacherSession } from '../auth/session/auth.session.service';
 
 import { createDemoTeacher, deleteOldDemoTeachers } from './demo.repository';
 import { seedDemoData } from './demo.seed';

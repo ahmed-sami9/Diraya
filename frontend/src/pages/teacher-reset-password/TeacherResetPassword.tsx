@@ -10,7 +10,7 @@ import {
   verifyResetToken,
   resetPassword,
   InvalidResetLinkError,
-} from '../../api/passwordReset.ts';
+} from '../../api/auth/passwordReset.ts';
 
 import AuthTextField from '../teacher-signIn/components/AuthTextField.tsx';
 

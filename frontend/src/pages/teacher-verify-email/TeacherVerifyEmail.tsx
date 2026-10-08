@@ -5,7 +5,7 @@ import { AlertCircleIcon } from '../../components/icons/index.ts';
 import AuthPageShell from '../../components/AuthPageShell.tsx';
 import { primaryButtonClasses } from '../../components/authPageClasses.ts';
 import { useAuth } from '../../context/AuthContext';
-import { verifyEmail, InvalidVerificationLinkError } from '../../api/emailVerification.ts';
+import { verifyEmail, InvalidVerificationLinkError } from '../../api/auth/emailVerification.ts';
 
 // What the page is showing:
 //   verifying -> sending the link's token to the server

@@ -17,13 +17,13 @@ import {
   AlertCircleIcon,
 } from '../../../components/icons/index.ts';
 import PencilLoader from '../../../components/PencilLoader.tsx';
-import useTeacherSignUp from '../../../hooks/useTeacherSignUp.ts';
-import useDemoLogin from '../../../hooks/useDemoLogin.ts';
+import useTeacherSignUp from '../../../hooks/auth/useTeacherSignUp.ts';
+import useDemoLogin from '../../../hooks/auth/useDemoLogin.ts';
 import type { User } from '../../../context/AuthContext';
 // Typed error so the UI can switch on a code instead of matching message strings.
-import { AuthError } from '../../../api/authErrors.ts';
-import { googleLoginRequest } from '../../../api/googleAuth.ts';
-import { resendVerificationEmail } from '../../../api/emailVerification.ts';
+import { AuthError } from '../../../api/auth/authErrors.ts';
+import { googleLoginRequest } from '../../../api/auth/googleAuth.ts';
+import { resendVerificationEmail } from '../../../api/auth/emailVerification.ts';
 
 import GoogleSignInButton from './GoogleSignInButton.tsx';
 

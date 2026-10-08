@@ -8,9 +8,9 @@ import {
 
 import { hashPassword, verifyPassword } from './password';
 import { AuthErrors } from './auth.errors';
-import { startTeacherSession } from './auth.session.service';
-import { getGoogleProfileFromCode } from './auth.google';
-import { sendVerificationEmail } from './auth.emailVerification.service';
+import { startTeacherSession } from './session/auth.session.service';
+import { getGoogleProfileFromCode } from './google/auth.google';
+import { sendVerificationEmail } from './email-verification/auth.emailVerification.service';
 
 export async function loginTeacher(email: string, password: string, rememberMe = false) {
   const teacher = await findTeacherByEmail(email);

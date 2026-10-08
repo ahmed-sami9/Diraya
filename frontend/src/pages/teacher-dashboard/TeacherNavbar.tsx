@@ -5,6 +5,9 @@ import HamburgerIcon from '../../components/icons/HamburgerIcon';
 import SearchIcon from '../../components/icons/SearchIcon';
 import BellIcon from '../../components/icons/BellIcon';
 import PlusIcon from '../../components/icons/PlusIcon';
+import CloseIcon from '../../components/icons/CloseIcon';
+
+import StudentSearch from './StudentSearch';
 
 interface TeacherNavbarProps {
   teacherName: string;
@@ -37,6 +40,9 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
   // Read the clock once, when the dashboard loads.
   const [now] = useState(() => new Date());
 
+  // Small screens only: the search opens as a full-width row in the card.
+  const [isPhoneSearchOpen, setPhoneSearchOpen] = useState(false);
+
   const firstName = getFirstName(teacherName);
 
   return (
@@ -45,7 +51,7 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
     <div className="z-20 bg-page px-4 pt-4 sm:px-6 lg:sticky lg:top-0 lg:px-8 lg:pt-6">
       <header
         className="
-          flex min-h-[76px] items-center gap-3
+          flex min-h-[76px] flex-wrap items-center gap-3
           rounded-2xl border border-primary/15 bg-primary-tint
           px-4 py-3
           sm:px-6
@@ -69,13 +75,13 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
 
         {/* Left: greeting and date */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <p className="truncate text-lg font-bold leading-tight text-ink sm:text-2xl">
+          <p className="truncate text-base font-semibold leading-tight text-ink sm:text-lg">
             {getGreeting(now)}
             {firstName && `, ${firstName}`}
           </p>
           <time
             dateTime={now.toISOString()}
-            className="mt-0.5 truncate text-xs text-ink-secondary sm:text-sm"
+            className="mt-0.5 truncate text-xs text-ink-secondary sm:text-[13px]"
           >
             {formatDate(now)}
           </time>
@@ -83,30 +89,30 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
 
         {/* Right: search, notifications, main action */}
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {/* TODO: search is not wired to any data yet */}
-          <label
-            className="
-              hidden h-11 w-56 items-center gap-2
-              rounded-[10px] border border-primary/15 bg-surface
-              px-3.5 text-ink-muted
-              focus-within:border-primary
-              md:flex
-              xl:w-64
-            "
+          {/* Student search: always visible from tablet width up. */}
+          <StudentSearch className="hidden w-56 md:block xl:w-64" />
+
+          {/* On phones the search hides behind this button to save space. */}
+          <button
+            type="button"
+            onClick={() => setPhoneSearchOpen((open) => !open)}
+            aria-label={isPhoneSearchOpen ? 'Close search' : 'Search students'}
+            aria-expanded={isPhoneSearchOpen}
+            className={`
+              flex h-11 w-11 items-center justify-center
+              rounded-[10px] border border-primary/15 bg-surface text-ink-secondary
+              transition-colors
+              hover:bg-surface-hover
+              md:hidden
+              ${focusRing}
+            `}
           >
-            <SearchIcon className="h-[18px] w-[18px] shrink-0" />
-            <input
-              type="search"
-              placeholder="Search students"
-              aria-label="Search students"
-              className="
-                min-w-0 flex-1 bg-transparent
-                text-sm text-ink
-                outline-none
-                placeholder:text-ink-muted
-              "
-            />
-          </label>
+            {isPhoneSearchOpen ? (
+              <CloseIcon className="h-5 w-5" />
+            ) : (
+              <SearchIcon className="h-5 w-5" />
+            )}
+          </button>
 
           {/* TODO: notifications are not wired yet */}
           <button
@@ -140,6 +146,15 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
             <span className="hidden sm:inline">Create quiz</span>
           </Link>
         </div>
+
+        {/* Phone search row: takes the full width under the greeting. */}
+        {isPhoneSearchOpen && (
+          <StudentSearch
+            className="basis-full md:hidden"
+            autoFocus
+            onSelect={() => setPhoneSearchOpen(false)}
+          />
+        )}
       </header>
     </div>
   );

@@ -24,9 +24,12 @@ import {
   forgotPassword,
   verifyResetToken,
   resetPasswordController,
-} from './auth.passwordReset.controller';
+} from './password-reset/auth.passwordReset.controller';
 
-import { verifyEmailController, resendVerification } from './auth.emailVerification.controller';
+import {
+  verifyEmailController,
+  resendVerification,
+} from './email-verification/auth.emailVerification.controller';
 
 import { startDemo } from '../demo/demo.controller';
 

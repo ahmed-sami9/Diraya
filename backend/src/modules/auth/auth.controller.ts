@@ -9,9 +9,9 @@ import {
 
 import { AUTH_COOKIE_NAME, setAuthCookie, clearAuthCookie } from './auth.cookie';
 
-import { verifyAccessToken, isInvalidTokenError } from './auth.token';
+import { verifyAccessToken, isInvalidTokenError } from './session/auth.token';
 
-import { revokeTeacherSession } from './auth.session.repository';
+import { revokeTeacherSession } from './session/auth.session.repository';
 
 import { deleteDemoTeacher } from '../demo/demo.repository';
 

@@ -7,8 +7,8 @@ import React, {
   type SetStateAction,
 } from 'react';
 
-import { getCurrentUser } from '../api/getCurrentUser';
-import { logoutRequest } from '../api/logout';
+import { getCurrentUser } from '../api/auth/getCurrentUser';
+import { logoutRequest } from '../api/auth/logout';
 
 export type User = {
   id: string;

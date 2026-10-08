@@ -4,7 +4,7 @@ import { MailIcon, XIcon, AlertCircleIcon } from '../../../components/icons/inde
 import CheckCircleIcon from '../../../components/icons/CheckCircleIcon.tsx';
 import PencilLoader from '../../../components/PencilLoader.tsx';
 import useModalBehavior from '../../../hooks/useModalBehavior.ts';
-import { requestPasswordReset } from '../../../api/passwordReset.ts';
+import { requestPasswordReset } from '../../../api/auth/passwordReset.ts';
 
 import AuthTextField from './AuthTextField.tsx';
 
