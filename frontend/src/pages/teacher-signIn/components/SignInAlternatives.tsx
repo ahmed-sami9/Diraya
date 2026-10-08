@@ -10,7 +10,7 @@ interface SignInAlternativesProps {
   demoError: string | null;
   onSignUp: () => void;
   onTryDemo: () => void;
-  onGoogleCredential: (credential: string) => void;
+  onGoogleCode: (code: string) => void;
   onGoogleError: (message: string) => void;
 }
 
@@ -91,7 +91,7 @@ function SignInAlternatives({
   demoError,
   onSignUp,
   onTryDemo,
-  onGoogleCredential,
+  onGoogleCode,
   onGoogleError,
 }: SignInAlternativesProps) {
   const [isOpeningSignUp, setIsOpeningSignUp] = useState(false);
@@ -144,7 +144,7 @@ function SignInAlternatives({
         className="mt-4 tall:mt-6"
         disabled={disabled}
         isSubmitting={isGoogleSubmitting}
-        onCredential={onGoogleCredential}
+        onCode={onGoogleCode}
         onError={onGoogleError}
       />
 

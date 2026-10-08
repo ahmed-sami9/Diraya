@@ -1,7 +1,8 @@
 import type { User } from '../context/AuthContext';
 
 type GoogleLoginInput = {
-  credential: string;
+  // The one-time authorization code from Google's sign-in window.
+  code: string;
   rememberMe: boolean;
 };
 

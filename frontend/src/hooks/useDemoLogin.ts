@@ -1,13 +1,16 @@
-// hooks/useDemoLogin.ts
-// hooks/useDemoLogin.ts
 import { useEffect, useState } from 'react';
-import useTeacherLogin from './useTeacherLogin';
+
+import { demoLoginRequest } from '../api/demoLogin';
 import type { User } from '../context/AuthContext';
 
+// Keeps the loading state on screen long enough to avoid a flicker.
 const MIN_LOADING_MS = 400;
 
+// "Try the demo". Used by both the sign-in section and the sign-up window.
+//
+// Each click gets the visitor their own temporary account from the server,
+// so there are no shared demo credentials in the frontend.
 function useDemoLogin(onAuthSuccess: (user: User) => void) {
-  const { login } = useTeacherLogin();
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
 
@@ -39,18 +42,19 @@ function useDemoLogin(onAuthSuccess: (user: User) => void) {
     };
 
     try {
-      const user = await login({
-        email: import.meta.env.VITE_DEMO_EMAIL,
-        password: import.meta.env.VITE_DEMO_PASSWORD,
-        rememberMe: false,
-      });
+      const user = await demoLoginRequest();
 
       await waitForMinimum();
       onAuthSuccess(user);
     } catch (error) {
       console.error(error);
       await waitForMinimum();
-      setDemoError('Could not load the demo. Please try again.');
+
+      // demoLoginRequest only throws messages written for users (for example
+      // the "too many attempts" one), so they are safe to show.
+      setDemoError(
+        error instanceof Error ? error.message : 'Could not load the demo. Please try again.'
+      );
     } finally {
       setIsDemoLoading(false);
     }

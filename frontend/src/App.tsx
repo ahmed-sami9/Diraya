@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import TeacherSignIn from './pages/teacher-signIn/TeacherSignIn';
+import TeacherResetPassword from './pages/teacher-reset-password/TeacherResetPassword';
+import TeacherVerifyEmail from './pages/teacher-verify-email/TeacherVerifyEmail';
 
 import TeacherDashboardLayout from './pages/teacher-dashboard/TeacherDashboardLayout';
 import TeacherHomePage from './pages/teacher-dashboard/home/TeacherHomePage';
@@ -28,6 +30,21 @@ function App() {
           element={<TeacherSignIn />}
         />
       </Route>
+
+      {/* Password reset, opened from the link in the reset email. It sits
+          outside PublicOnlyRoute on purpose: a teacher who is still signed in
+          on this browser must be able to use the link too. */}
+      <Route
+        path="/teacher/reset-password"
+        element={<TeacherResetPassword />}
+      />
+
+      {/* Email confirmation, opened from the link sent after sign-up. Outside
+          PublicOnlyRoute for the same reason as the reset page. */}
+      <Route
+        path="/teacher/verify-email"
+        element={<TeacherVerifyEmail />}
+      />
 
       {/* Teacher-protected area */}
       <Route element={<ProtectedRoute allowedRole="teacher" />}>

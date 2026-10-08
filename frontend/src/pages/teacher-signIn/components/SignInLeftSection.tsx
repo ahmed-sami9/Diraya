@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
 
 import { MailIcon, LockIcon, AlertCircleIcon } from '../../../components/icons/index';
+import CheckCircleIcon from '../../../components/icons/CheckCircleIcon.tsx';
 import PencilLoader from '../../../components/PencilLoader.tsx';
 import useTeacherLogin from '../../../hooks/useTeacherLogin.ts';
 import useDemoLogin from '../../../hooks/useDemoLogin.ts';
 import type { User } from '../../../context/AuthContext';
 import { AuthError } from '../../../api/authErrors';
 import { googleLoginRequest } from '../../../api/googleAuth';
+import { resendVerificationEmail } from '../../../api/emailVerification.ts';
 
 import AuthTextField from './AuthTextField.tsx';
 import SignInAlternatives from './SignInAlternatives.tsx';
@@ -17,8 +19,12 @@ import SignInAlternatives from './SignInAlternatives.tsx';
 
 interface SignInLeftSectionProps {
   onSignUp: () => void;
+  // Opens the forgot-password window, carrying over the email typed so far.
+  onForgotPassword: (email: string) => void;
   isOpen: boolean;
   onAuthSuccess: (user: User) => void;
+  // A success message shown above the form, e.g. after a password reset.
+  notice?: string | null;
 }
 
 type FieldName = 'email' | 'password';
@@ -87,7 +93,13 @@ const useHasVisited = () => {
 /* Component                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectionProps) {
+function SignInLeftSection({
+  onSignUp,
+  onForgotPassword,
+  isOpen,
+  onAuthSuccess,
+  notice,
+}: SignInLeftSectionProps) {
   const { login } = useTeacherLogin();
   const { tryDemo, isDemoLoading, demoError, clearDemoError } = useDemoLogin(onAuthSuccess);
   const hasVisited = useHasVisited();
@@ -99,6 +111,11 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+
+  // Set when sign-in fails because the email was never confirmed. It holds
+  // the address, so the error can offer to send the confirmation email again.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   // True while any request (password, Google or demo sign-in) is running.
   const isBusy = isSubmitting || isGoogleSubmitting || isDemoLoading;
@@ -138,6 +155,8 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
   // Clears every message before a new sign-in attempt starts.
   const resetMessages = () => {
     setLoginError(null);
+    setUnverifiedEmail(null);
+    setResendStatus('idle');
     clearDemoError();
   };
 
@@ -174,16 +193,44 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
       setLoginError(
         error instanceof AuthError ? error.message : 'Something went wrong. Please try again.'
       );
+
+      // Right password, unconfirmed email: remember the address so the error
+      // box can show a "send it again" button.
+      if (error instanceof AuthError && error.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(email.trim());
+      }
     } finally {
       actionInFlight.current = false;
       setSubmitting(false);
     }
   };
 
-  // 2. Google. The button hands us Google's ID token (the "credential"). The
-  // frontend cannot trust it by itself, so it goes to the backend, which
-  // verifies it with Google and answers with our own user and session cookie.
-  const handleGoogleCredential = async (credential: string) => {
+  // Sends the confirmation email again for the address that just failed.
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail || resendStatus !== 'idle') return;
+
+    setResendStatus('sending');
+
+    try {
+      await resendVerificationEmail(unverifiedEmail);
+
+      setResendStatus('sent');
+    } catch (error) {
+      console.error(error);
+
+      setUnverifiedEmail(null);
+      setResendStatus('idle');
+      setLoginError(
+        error instanceof Error ? error.message : 'Could not send the email. Please try again.'
+      );
+    }
+  };
+
+  // 2. Google. Our button hands us Google's one-time code. The frontend can
+  // do nothing with it, so it goes to the backend, which exchanges it with
+  // Google for the person's identity and answers with our own user and
+  // session cookie.
+  const handleGoogleCode = async (code: string) => {
     if (isBusy || actionInFlight.current) return;
 
     actionInFlight.current = true;
@@ -194,7 +241,7 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
     const startedAt = Date.now();
 
     try {
-      const user = await googleLoginRequest({ credential, rememberMe });
+      const user = await googleLoginRequest({ code, rememberMe });
 
       await waitForMinimumLoading(startedAt);
 
@@ -348,6 +395,31 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
           </p>
         </div>
 
+        {/* Good news from another screen (hidden once an error needs the space) */}
+        {notice && !loginError && (
+          <div
+            role="status"
+            className="
+              w-full
+              mt-5
+              flex items-start
+              gap-2.5
+              px-4 py-3
+              bg-emerald-50
+              border border-emerald-200
+              rounded-lg
+              text-sm
+              text-emerald-800
+
+              md:w-[90%]
+              md:mx-auto
+            "
+          >
+            <CheckCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600" />
+            <span>{notice}</span>
+          </div>
+        )}
+
         {/* Sign-in error from the server */}
         {loginError && (
           <div
@@ -369,7 +441,43 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
             "
           >
             <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
-            <span>{loginError}</span>
+
+            <div className="flex-1">
+              <span>{loginError}</span>
+
+              {/* Only for the "email not confirmed" error. */}
+              {unverifiedEmail &&
+                (resendStatus === 'sent' ? (
+                  <span className="block mt-1 font-semibold">
+                    A new link is on its way to {unverifiedEmail}.
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendStatus === 'sending'}
+                    className="
+                      block mt-1
+
+                      font-semibold
+                      underline
+                      cursor-pointer
+                      rounded-sm
+
+                      hover:no-underline
+
+                      focus-visible:outline-none
+                      focus-visible:ring-2
+                      focus-visible:ring-red-400
+
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
+                  >
+                    {resendStatus === 'sending' ? 'Sending...' : 'Send the confirmation email again'}
+                  </button>
+                ))}
+            </div>
           </div>
         )}
 
@@ -421,8 +529,7 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
           />
 
           <div className="w-full flex flex-col gap-5 mt-5 tall:gap-6 tall:mt-7">
-            {/* Remember me (sent with the sign-in request) and Forgot password
-                (design only for now) */}
+            {/* Remember me (sent with the sign-in request) and Forgot password */}
             <div className="w-full flex justify-between items-center gap-3 text-sm">
               <div className="flex items-center">
                 <input
@@ -448,24 +555,36 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
                 </label>
               </div>
 
-              <a
-                href="#"
-                aria-disabled={isBusy}
-                onClick={(e) => {
-                  if (isBusy) e.preventDefault();
-                }}
-                className={`
+              {/* A button, not a link: it opens a window on this page and
+                  does not navigate anywhere. */}
+              <button
+                type="button"
+                onClick={() => onForgotPassword(email)}
+                disabled={isBusy}
+                className="
                   text-[#3431E4]
                   font-medium
+
+                  cursor-pointer
                   transition-colors
+
                   hover:text-[#2926C2]
                   hover:underline
 
-                  ${isBusy ? 'pointer-events-none opacity-60' : ''}
-                `}
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-[#3431E4]
+                  focus-visible:ring-offset-2
+
+                  rounded-sm
+
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
+                  disabled:no-underline
+                "
               >
                 Forgot password?
-              </a>
+              </button>
             </div>
 
             <button
@@ -526,7 +645,7 @@ function SignInLeftSection({ onSignUp, isOpen, onAuthSuccess }: SignInLeftSectio
           demoError={demoError}
           onSignUp={onSignUp}
           onTryDemo={handleTryDemo}
-          onGoogleCredential={handleGoogleCredential}
+          onGoogleCode={handleGoogleCode}
           onGoogleError={handleGoogleError}
         />
       </div>

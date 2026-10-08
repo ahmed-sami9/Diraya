@@ -1,131 +1,128 @@
-import { useEffect, useRef, useState } from 'react';
-import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 
 import PencilLoader from '../../../components/PencilLoader.tsx';
 
 interface GoogleSignInButtonProps {
-  // True while any other request is running. The button stays visible but
-  // cannot be clicked.
+  // True while any other request is running.
   disabled: boolean;
-  // True while our backend is checking the credential Google returned.
+  // True while our backend is exchanging and checking Google's code.
   isSubmitting: boolean;
-  // Called with Google's ID token. The parent sends it to the backend.
-  onCredential: (credential: string) => void;
+  // Called with Google's one-time authorization code. The parent sends it to
+  // the backend, which is the only place it can be turned into a sign-in.
+  onCode: (code: string) => void;
   onError: (message: string) => void;
   // Spacing classes from the parent, so the button fits both the sign-in
   // section and the sign-up window.
   className?: string;
 }
 
-// Google draws this button itself, inside an iframe, and only accepts a fixed
-// pixel width between these two values. It cannot be set to "100%".
-const MIN_BUTTON_WIDTH = 200;
-const MAX_BUTTON_WIDTH = 400;
-
-// Measures the wrapper so the Google button can be as wide as Google allows
-// on every screen size, and re-measures when the layout changes.
-const useButtonWidth = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState<number | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const measure = () => {
-      const available = Math.floor(container.clientWidth);
-      setWidth(Math.min(MAX_BUTTON_WIDTH, Math.max(MIN_BUTTON_WIDTH, available)));
-    };
-
-    measure();
-
-    const observer = new ResizeObserver(measure);
-    observer.observe(container);
-
-    return () => observer.disconnect();
-  }, []);
-
-  return { containerRef, width };
-};
-
+// Our own "Continue with Google" button.
+//
+// The button is plain HTML that we style ourselves. Clicking it asks Google to
+// open its sign-in window, which is the part that stays Google's: the person
+// picks an account and types their password there, never on our page.
+//
+// Because the button is ours, Google does not hand it a finished identity
+// token. It returns a one-time code instead (the "auth-code" flow). That code
+// is useless by itself: only our backend, which holds the client secret, can
+// exchange it for the person's identity.
 function GoogleSignInButton({
   disabled,
   isSubmitting,
-  onCredential,
+  onCode,
   onError,
   className = '',
 }: GoogleSignInButtonProps) {
-  const { containerRef, width } = useButtonWidth();
+  const openGoogleWindow = useGoogleLogin({
+    flow: 'auth-code',
 
-  const handleSuccess = (response: CredentialResponse) => {
-    if (!response.credential) {
-      onError('Google did not return a sign-in credential. Please try again.');
-      return;
-    }
+    // Always show Google's account chooser, so nobody is signed in as
+    // whichever Google account happens to be open in this browser.
+    select_account: true,
 
-    onCredential(response.credential);
-  };
+    onSuccess: ({ code }) => onCode(code),
 
-  const handleError = () => {
-    onError('Google sign-in could not be completed. Please try again.');
-  };
+    // Google answered with an error. "access_denied" means the person pressed
+    // Cancel on Google's screen, which is a choice and not a failure.
+    onError: ({ error }) => {
+      if (error === 'access_denied') return;
+
+      onError('Google sign-in could not be completed. Please try again.');
+    },
+
+    // The window never reached Google. Closing it is also a choice, so only
+    // a blocked popup is reported.
+    onNonOAuthError: ({ type }) => {
+      if (type === 'popup_failed_to_open') {
+        onError('Your browser blocked the Google window. Allow pop-ups for this site and try again.');
+      }
+    },
+  });
 
   return (
-    <div
-      ref={containerRef}
+    <button
+      type="button"
+      onClick={() => openGoogleWindow()}
+      disabled={disabled}
+      aria-busy={isSubmitting}
       className={`
-        relative
-        w-full min-h-[50px]
+        w-full h-[50px]
 
-        flex items-center justify-center
+        flex items-center justify-center gap-2
 
-        xl:min-h-[46px]
+        text-sm
+        font-semibold
+        text-slate-800
+
+        bg-white
+
+        border border-gray-300
+        rounded-md
+
+        shadow-sm shadow-gray-200
+
+        cursor-pointer
+        transition-all duration-200
+
+        hover:bg-gray-50
+        hover:border-gray-400
+        hover:shadow-md
+
+        active:scale-[0.995]
+
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-[#3431E4]
+        focus-visible:ring-offset-2
+
+        disabled:cursor-not-allowed
+        disabled:opacity-60
+        disabled:hover:bg-white
+        disabled:hover:border-gray-300
+        disabled:hover:shadow-sm
+
+        xl:h-[46px]
 
         ${className}
       `}
     >
-      {/* The Google button stays mounted the whole time, so it never reloads
-          or makes the layout jump. While busy it is dimmed and unclickable;
-          while Google sign-in is being verified it is hidden behind the
-          status message below. */}
-      <div
-        className={`
-          transition-opacity duration-200
-
-          ${disabled ? 'pointer-events-none opacity-60' : ''}
-          ${isSubmitting ? 'invisible' : ''}
-        `}
-      >
-        {width !== null && (
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={handleError}
-            text="continue_with"
-            theme="outline"
-            size="large"
-            shape="rectangular"
-            width={String(width)}
-            use_fedcm_for_button
-          />
-        )}
-      </div>
-
-      {isSubmitting && (
-        <div
-          role="status"
-          className="
-            absolute inset-0
-
-            flex items-center justify-center gap-2
-
-            text-sm text-gray-500
-          "
-        >
+      {isSubmitting ? (
+        <>
           <PencilLoader />
-          <span>Signing in with Google…</span>
-        </div>
+          <span aria-live="polite">Signing in with Google…</span>
+        </>
+      ) : (
+        <>
+          <img
+            src="/google-logo.png"
+            alt=""
+            aria-hidden="true"
+            className="w-5 h-5"
+          />
+          Continue with Google
+        </>
       )}
-    </div>
+    </button>
   );
 }
 

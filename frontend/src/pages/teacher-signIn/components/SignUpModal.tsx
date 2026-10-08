@@ -23,6 +23,7 @@ import type { User } from '../../../context/AuthContext';
 // Typed error so the UI can switch on a code instead of matching message strings.
 import { AuthError } from '../../../api/authErrors.ts';
 import { googleLoginRequest } from '../../../api/googleAuth.ts';
+import { resendVerificationEmail } from '../../../api/emailVerification.ts';
 
 import GoogleSignInButton from './GoogleSignInButton.tsx';
 
@@ -52,7 +53,16 @@ const EMPTY_FORM: FormValues = {
 // flicker/glitch on fast responses.
 const MIN_LOADING_MS = 400;
 
+// These limits are the same as the backend's sign-up rules
+// (signUpSchema in auth.validation.ts). Keep the two in step, or the form
+// will accept values the server then rejects.
+const MIN_NAME_LENGTH = 2;
+const MAX_NAME_LENGTH = 100;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
+
+// The server sends at most one confirmation email per minute per account.
+const RESEND_COOLDOWN_SECONDS = 60;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -71,8 +81,14 @@ const FOCUSABLE_SELECTOR =
 const validateForm = (values: FormValues): FieldErrors => {
   const errors: FieldErrors = {};
 
-  if (!values.fullName.trim()) {
+  const fullName = values.fullName.trim();
+
+  if (!fullName) {
     errors.fullName = 'Full name is required';
+  } else if (fullName.length < MIN_NAME_LENGTH) {
+    errors.fullName = `Full name must be at least ${MIN_NAME_LENGTH} characters`;
+  } else if (fullName.length > MAX_NAME_LENGTH) {
+    errors.fullName = `Full name must be ${MAX_NAME_LENGTH} characters or fewer`;
   } else if (/\p{N}/u.test(values.fullName)) {
     errors.fullName = 'Full name cannot contain numbers';
   }
@@ -87,6 +103,8 @@ const validateForm = (values: FormValues): FieldErrors => {
     errors.password = 'Password is required';
   } else if (values.password.length < MIN_PASSWORD_LENGTH) {
     errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+  } else if (values.password.length > MAX_PASSWORD_LENGTH) {
+    errors.password = `Password must be ${MAX_PASSWORD_LENGTH} characters or fewer`;
   }
 
   if (values.confirmPassword !== values.password) {
@@ -215,6 +233,14 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
 
+  // Set after a successful sign-up. While it holds an address, the window
+  // shows "confirm your email" in place of the form.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  // Seconds until "Resend" can be used again. 0 means it is available.
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [resendError, setResendError] = useState<string | null>(null);
+
   // True while any request (sign up, Google or demo login) is in flight.
   const isBusy = isSubmitting || isGoogleSubmitting || isDemoLoading;
 
@@ -223,9 +249,21 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
   const isBusyRef = useRef(isBusy);
   isBusyRef.current = isBusy;
 
-  // Which kind of server error we're showing.
+  // Which kind of server error we're showing. "Email taken" goes under the
+  // email field; every other error goes in the banner above the form, and
+  // only a failure on our side gets a "Try again" button.
   const emailTaken = submitError?.code === 'EMAIL_TAKEN';
   const serverFailed = submitError?.code === 'SERVER_ERROR';
+  const bannerError = submitError && !emailTaken ? submitError : null;
+
+  // Counts the resend cooldown down to zero, one second at a time.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setTimeout(() => setResendCooldown((seconds) => seconds - 1), 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   /* ------------------------------ Handlers ------------------------------ */
 
@@ -269,30 +307,73 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
     const startedAt = Date.now();
 
     try {
-      const user = await signUp(formData);
+      const { email } = await signUp(formData);
 
-      // Success is handled by the parent (it stores the user and redirects).
-      onAuthSuccess(user);
+      await waitForMinimumLoading(startedAt);
+
+      // The account exists but is not signed in yet. Switch to the "confirm
+      // your email" view; signing in happens when they click the emailed link.
+      setPendingEmail(email);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setResendStatus('idle');
+      setResendError(null);
     } catch (error) {
       console.error(error);
 
+      await waitForMinimumLoading(startedAt);
+
       // Keep the AuthError as-is. Anything unexpected (a bug in the hook,
-      // a plain Error) is normalized to SERVER_ERROR so the UI only ever sees
-      // one of the two known codes.
+      // a plain Error) is normalized to SERVER_ERROR so the UI only ever
+      // deals with known codes.
       setSubmitError(
         error instanceof AuthError ? error : new AuthError('SERVER_ERROR', SERVER_ERROR_MESSAGE)
       );
     } finally {
-      await waitForMinimumLoading(startedAt);
       setIsSubmitting(false);
     }
   };
 
-  // Google. The button hands us Google's ID token (the "credential"). The
-  // backend verifies it, creates the account on first use, and answers with
-  // our own user and session cookie. A first-time Google user is signed up
-  // here; a returning one is simply signed in.
-  const handleGoogleCredential = async (credential: string) => {
+  // "Resend" on the confirm-your-email view.
+  const handleResendVerification = async () => {
+    if (!pendingEmail || resendCooldown > 0 || resendStatus === 'sending') return;
+
+    setResendStatus('sending');
+    setResendError(null);
+
+    try {
+      await resendVerificationEmail(pendingEmail);
+
+      setResendStatus('sent');
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (error) {
+      console.error(error);
+
+      setResendStatus('idle');
+      setResendError(
+        error instanceof Error ? error.message : 'Could not send the email. Please try again.'
+      );
+    }
+  };
+
+  // Puts the window back to an empty sign-up form, so the next time it opens
+  // it does not still show "confirm your email" for an old address.
+  const resetAfterSignUp = () => {
+    if (!pendingEmail) return;
+
+    setPendingEmail(null);
+    setFormData(EMPTY_FORM);
+    setErrors({});
+    setSubmitError(null);
+    setResendCooldown(0);
+    setResendStatus('idle');
+    setResendError(null);
+  };
+
+  // Google. Our button hands us Google's one-time code. The backend exchanges
+  // it for the person's identity, creates the account on first use, and
+  // answers with our own user and session cookie. A first-time Google user is
+  // signed up here; a returning one is simply signed in.
+  const handleGoogleCode = async (code: string) => {
     if (isBusy) return;
 
     setSubmitError(null);
@@ -304,7 +385,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
 
     try {
       // Like normal sign-up, this starts a normal (not "remembered") session.
-      const user = await googleLoginRequest({ credential, rememberMe: false });
+      const user = await googleLoginRequest({ code, rememberMe: false });
 
       await waitForMinimumLoading(startedAt);
 
@@ -338,7 +419,13 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
     // feedback on whether their account was actually created.
     if (isBusy) return;
 
+    resetAfterSignUp();
     onClose();
+  };
+
+  const handleSwitchToSignIn = () => {
+    resetAfterSignUp();
+    onSwitchToSignIn();
   };
 
   /* ------------------- Focus, scroll lock and keyboard ------------------- */
@@ -412,7 +499,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
         {submitError.message}{' '}
         <button
           type="button"
-          onClick={onSwitchToSignIn}
+          onClick={handleSwitchToSignIn}
           className="font-semibold text-[#3431E4] hover:underline cursor-pointer"
         >
           Sign in instead
@@ -464,250 +551,365 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
           <XIcon />
         </button>
 
-        {/* Heading */}
-        <h2
-          id="signup-title"
-          className="text-2xl font-bold text-slate-800"
-        >
-          Create your account
-        </h2>
+        {pendingEmail ? (
+          /* ------------------- After sign-up: confirm your email ------------------- */
+          <div className="flex flex-col items-center text-center">
+            <span
+              className="
+                flex items-center justify-center
+                w-14 h-14
+                rounded-full
+                bg-indigo-50
+                text-[#3431E4]
+              "
+            >
+              <MailIcon className="w-7 h-7" />
+            </span>
 
-        <p className="text-sm text-[#878383] mt-2">
-          Join Diraya and start managing your classes with ease.
-        </p>
+            <h2
+              id="signup-title"
+              className="mt-4 text-2xl font-bold text-slate-800"
+            >
+              Confirm your email
+            </h2>
 
-        {/* Server error banner with a retry button. Shown only for SERVER_ERROR;
-            EMAIL_TAKEN appears under the email field instead. */}
-        {serverFailed && (
-          <div
-            role="alert"
-            className="
-              flex items-start gap-2.5
-              mt-5 px-4 py-3
-              bg-red-50 border border-red-200 rounded-lg
-              text-sm text-red-700
-            "
-          >
-            <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              We sent a link to{' '}
+              <span className="font-semibold text-slate-800 break-all">{pendingEmail}</span>. Click
+              it to finish creating your account and go to your dashboard. The link expires in 24
+              hours.
+            </p>
 
-            <div className="flex-1">
-              <span>{submitError.message}</span>
-
+            <p
+              className="mt-5 text-sm text-gray-600"
+              aria-live="polite"
+            >
+              {resendStatus === 'sent' ? 'A new email is on its way. ' : "Didn't get it? Check your spam folder, or "}
               <button
                 type="button"
-                onClick={handleSubmit}
-                className="block mt-1 font-semibold underline hover:no-underline cursor-pointer"
+                onClick={handleResendVerification}
+                disabled={resendCooldown > 0 || resendStatus === 'sending'}
+                className="
+                  font-semibold
+                  text-[#3431E4]
+                  cursor-pointer
+                  rounded-sm
+
+                  hover:underline
+
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-[#3431E4]
+                  focus-visible:ring-offset-2
+
+                  disabled:text-gray-400
+                  disabled:cursor-not-allowed
+                  disabled:no-underline
+                "
               >
-                Try again
+                {resendStatus === 'sending'
+                  ? 'Sending...'
+                  : resendCooldown > 0
+                    ? `Resend in ${resendCooldown}s`
+                    : 'Resend the email'}
               </button>
-            </div>
+            </p>
+
+            {resendError && (
+              <p
+                role="alert"
+                className="mt-2 text-xs font-medium text-red-600"
+              >
+                {resendError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSwitchToSignIn}
+              className="
+                w-full h-[50px]
+                mt-6
+
+                flex items-center justify-center
+
+                text-sm
+                font-semibold
+                text-slate-800
+
+                bg-white
+                border border-gray-300
+                rounded-md
+
+                cursor-pointer
+                transition-colors
+
+                hover:bg-gray-50
+                hover:border-gray-400
+
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#3431E4]
+                focus-visible:ring-offset-2
+
+                xl:h-[46px]
+              "
+            >
+              Back to sign in
+            </button>
           </div>
-        )}
+        ) : (
+          /* ------------------------------ Sign-up form ------------------------------ */
+          <>
+            {/* Heading */}
+            <h2
+              id="signup-title"
+              className="text-2xl font-bold text-slate-800"
+            >
+              Create your account
+            </h2>
 
-        {/* Form */}
-        <form
-          onFocus={handleFormFocus}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-          noValidate
-          className="
-            flex flex-col gap-4
-            mt-6
-          "
-        >
-          <SignUpField
-            label="Full name"
-            icon={UserIcon}
-            type="text"
-            name="full-name"
-            value={formData.fullName}
-            error={errors.fullName}
-            errorId="fullName-error"
-            disabled={isSubmitting}
-            onFocus={() => clearFieldError('fullName')}
-            onChange={(e) => updateField('fullName', e.target.value)}
-          />
+            <p className="text-sm text-[#878383] mt-2">
+              Join Diraya and start managing your classes with ease.
+            </p>
 
-          <SignUpField
-            label="Email address"
-            icon={MailIcon}
-            type="email"
-            name="email-address"
-            value={formData.email}
-            error={emailError}
-            errorId="email-error"
-            errorRole={!errors.email && emailTaken ? 'alert' : undefined}
-            disabled={isSubmitting}
-            onFocus={() => clearFieldError('email')}
-            onChange={(e) => updateField('email', e.target.value)}
-          />
+            {/* Error banner. EMAIL_TAKEN is not shown here; it appears under the
+                email field instead. */}
+            {bannerError && (
+              <div
+                role="alert"
+                className="
+                  flex items-start gap-2.5
+                  mt-5 px-4 py-3
+                  bg-red-50 border border-red-200 rounded-lg
+                  text-sm text-red-700
+                "
+              >
+                <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
 
-          <SignUpField
-            label="Password"
-            icon={LockIcon}
-            type="password"
-            name="password"
-            value={formData.password}
-            error={errors.password}
-            errorId="password-error"
-            disabled={isSubmitting}
-            onFocus={() => clearFieldError('password')}
-            onChange={(e) => updateField('password', e.target.value)}
-          />
+                <div className="flex-1">
+                  <span>{bannerError.message}</span>
 
-          <SignUpField
-            label="Confirm password"
-            icon={LockIcon}
-            type="password"
-            name="confirm-password"
-            value={formData.confirmPassword}
-            error={errors.confirmPassword}
-            errorId="confirmPassword-error"
-            disabled={isSubmitting}
-            onFocus={() => clearFieldError('confirmPassword')}
-            onChange={(e) => updateField('confirmPassword', e.target.value)}
-          />
-
-          <button
-            type="submit"
-            disabled={isBusy}
-            aria-busy={isSubmitting}
-            className="
-              w-full h-[50px]
-              flex items-center justify-center gap-2
-              text-center
-              bg-blue-600
-              text-white text-sm font-medium
-              rounded-md
-              px-6 py-2
-              mt-2
-              transition-colors
-              hover:bg-blue-700
-              cursor-pointer
-              disabled:cursor-not-allowed
-              disabled:opacity-80
-              xl:h-[45px]
-            "
-          >
-            {isSubmitting ? (
-              <>
-                <PencilLoader />
-                <span aria-live="polite">Signing up...</span>
-              </>
-            ) : (
-              'Sign Up'
+                  {/* Retrying only helps when the failure was on our side. */}
+                  {serverFailed && (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="block mt-1 font-semibold underline hover:no-underline cursor-pointer"
+                    >
+                      Try again
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
-        </form>
 
-        {/* Divider */}
-        <div className="flex items-center gap-2 my-5">
-          <hr className="flex-1 border-gray-200" />
-          <span className="text-sm text-gray-400">or</span>
-          <hr className="flex-1 border-gray-200" />
-        </div>
+            {/* Form */}
+            <form
+              onFocus={handleFormFocus}
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubmit();
+              }}
+              noValidate
+              className="
+                flex flex-col gap-4
+                mt-6
+              "
+            >
+              <SignUpField
+                label="Full name"
+                icon={UserIcon}
+                type="text"
+                name="full-name"
+                value={formData.fullName}
+                error={errors.fullName}
+                errorId="fullName-error"
+                disabled={isSubmitting}
+                onFocus={() => clearFieldError('fullName')}
+                onChange={(e) => updateField('fullName', e.target.value)}
+              />
 
-        {/* Google */}
-        <GoogleSignInButton
-          className="flex-shrink-0"
-          disabled={isBusy}
-          isSubmitting={isGoogleSubmitting}
-          onCredential={handleGoogleCredential}
-          onError={setGoogleError}
-        />
+              <SignUpField
+                label="Email address"
+                icon={MailIcon}
+                type="email"
+                name="email-address"
+                value={formData.email}
+                error={emailError}
+                errorId="email-error"
+                errorRole={!errors.email && emailTaken ? 'alert' : undefined}
+                disabled={isSubmitting}
+                onFocus={() => clearFieldError('email')}
+                onChange={(e) => updateField('email', e.target.value)}
+              />
 
-        {googleError && (
-          <p
-            role="alert"
-            className="text-xs font-medium text-red-600 text-center mt-3"
-          >
-            {googleError}
-          </p>
-        )}
+              <SignUpField
+                label="Password"
+                icon={LockIcon}
+                type="password"
+                name="password"
+                value={formData.password}
+                error={errors.password}
+                errorId="password-error"
+                disabled={isSubmitting}
+                onFocus={() => clearFieldError('password')}
+                onChange={(e) => updateField('password', e.target.value)}
+              />
 
-        {/* Sign in */}
-        <p className="text-sm font-medium text-[#7A7A7A] text-center mt-6">
-          Already have an account?{' '}
-          <button
-            type="button"
-            onClick={onSwitchToSignIn}
-            disabled={isBusy}
-            className="
-              text-[#3431E4]
-              hover:underline
-              disabled:opacity-60
-              disabled:cursor-not-allowed
-              disabled:no-underline
-            "
-          >
-            Sign in
-          </button>
-        </p>
+              <SignUpField
+                label="Confirm password"
+                icon={LockIcon}
+                type="password"
+                name="confirm-password"
+                value={formData.confirmPassword}
+                error={errors.confirmPassword}
+                errorId="confirmPassword-error"
+                disabled={isSubmitting}
+                onFocus={() => clearFieldError('confirmPassword')}
+                onChange={(e) => updateField('confirmPassword', e.target.value)}
+              />
 
-        {/* Demo */}
-        <p className="text-sm font-medium text-[#7A7A7A] text-center mt-4">
-          Just looking around?{' '}
-          <button
-            type="button"
-            onClick={handleTryDemo}
-            disabled={isBusy}
-            className="
-              group
-              inline-flex items-center gap-1
+              <button
+                type="submit"
+                disabled={isBusy}
+                aria-busy={isSubmitting}
+                className="
+                  w-full h-[50px]
+                  flex items-center justify-center gap-2
+                  text-center
+                  bg-blue-600
+                  text-white text-sm font-medium
+                  rounded-md
+                  px-6 py-2
+                  mt-2
+                  transition-colors
+                  hover:bg-blue-700
+                  cursor-pointer
+                  disabled:cursor-not-allowed
+                  disabled:opacity-80
+                  xl:h-[45px]
+                "
+              >
+                {isSubmitting ? (
+                  <>
+                    <PencilLoader />
+                    <span aria-live="polite">Signing up...</span>
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
+              </button>
+            </form>
 
-              text-[#3431E4]
+            {/* Divider */}
+            <div className="flex items-center gap-2 my-5">
+              <hr className="flex-1 border-gray-200" />
+              <span className="text-sm text-gray-400">or</span>
+              <hr className="flex-1 border-gray-200" />
+            </div>
 
-              cursor-pointer
+            {/* Google */}
+            <GoogleSignInButton
+              className="flex-shrink-0"
+              disabled={isBusy}
+              isSubmitting={isGoogleSubmitting}
+              onCode={handleGoogleCode}
+              onError={setGoogleError}
+            />
 
-              hover:underline
-
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-[#3431E4]
-              focus-visible:ring-offset-2
-
-              rounded-sm
-
-              disabled:opacity-60
-              disabled:cursor-not-allowed
-              disabled:no-underline
-            "
-          >
-            {isDemoLoading ? (
-              'Loading demo…'
-            ) : (
-              <>
-                Try the demo
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className="
-                    w-4 h-4
-                    transition-transform duration-200
-                    group-hover:translate-x-0.5
-                  "
-                >
-                  <path d="M4 10h12M11 5l5 5-5 5" />
-                </svg>
-              </>
+            {googleError && (
+              <p
+                role="alert"
+                className="text-xs font-medium text-red-600 text-center mt-3"
+              >
+                {googleError}
+              </p>
             )}
-          </button>
-        </p>
 
-        {demoError && (
-          <p
-            role="alert"
-            className="text-xs font-medium text-red-600 text-center mt-3"
-          >
-            {demoError}
-          </p>
+            {/* Sign in */}
+            <p className="text-sm font-medium text-[#7A7A7A] text-center mt-6">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={handleSwitchToSignIn}
+                disabled={isBusy}
+                className="
+                  text-[#3431E4]
+                  hover:underline
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
+                  disabled:no-underline
+                "
+              >
+                Sign in
+              </button>
+            </p>
+
+            {/* Demo */}
+            <p className="text-sm font-medium text-[#7A7A7A] text-center mt-4">
+              Just looking around?{' '}
+              <button
+                type="button"
+                onClick={handleTryDemo}
+                disabled={isBusy}
+                className="
+                  group
+                  inline-flex items-center gap-1
+
+                  text-[#3431E4]
+
+                  cursor-pointer
+
+                  hover:underline
+
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-[#3431E4]
+                  focus-visible:ring-offset-2
+
+                  rounded-sm
+
+                  disabled:opacity-60
+                  disabled:cursor-not-allowed
+                  disabled:no-underline
+                "
+              >
+                {isDemoLoading ? (
+                  'Loading demo…'
+                ) : (
+                  <>
+                    Try the demo
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="
+                        w-4 h-4
+                        transition-transform duration-200
+                        group-hover:translate-x-0.5
+                      "
+                    >
+                      <path d="M4 10h12M11 5l5 5-5 5" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </p>
+
+            {demoError && (
+              <p
+                role="alert"
+                className="text-xs font-medium text-red-600 text-center mt-3"
+              >
+                {demoError}
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

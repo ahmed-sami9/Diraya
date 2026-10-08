@@ -1,10 +1,16 @@
 import { AuthError } from './authErrors';
 
+// What the server answers after creating the account. The teacher is NOT
+// signed in yet: they first confirm the email address we return here.
+export type SignUpResult = {
+  email: string;
+};
+
 export const signUpTeacher = async (credentials: {
   email: string;
   password: string;
   fullName: string;
-}) => {
+}): Promise<SignUpResult> => {
   let res: Response;
 
   try {
@@ -14,7 +20,6 @@ export const signUpTeacher = async (credentials: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
     });
-    console.log(res);
   } catch {
     // Server down, offline, CORS: fetch rejects and never returns a Response,
     // so this case never reaches the res.ok check below.
@@ -24,19 +29,34 @@ export const signUpTeacher = async (credentials: {
     );
   }
 
-  if (!res.ok) {
-    // 409 Conflict = email already registered.
-    // If your backend signals this differently, check the body instead, e.g.:
-    //   const body = await res.json().catch(() => null);
-    //   if (body?.code === 'EMAIL_IN_USE') { ... }
-    if (res.status === 409) {
-      throw new AuthError('EMAIL_TAKEN', 'An account with this email already exists.');
-    }
+  const data = await res.json().catch(() => null);
+
+  if (res.ok) {
+    return { email: data?.email ?? credentials.email };
+  }
+
+  // Each kind of failure gets its own code and its own message, so the form
+  // never blames "our side" for something the person can fix.
+  if (res.status === 409) {
+    throw new AuthError('EMAIL_TAKEN', 'An account with this email already exists.');
+  }
+
+  if (res.status === 429) {
     throw new AuthError(
-      'SERVER_ERROR',
-      "Your account wasn't created because something went wrong on our side. Try again in a moment."
+      'TOO_MANY_ATTEMPTS',
+      'Too many sign-up attempts. Please wait a while and try again.'
     );
   }
-  const data = await res.json();
-  return data.user;
+
+  if (res.status === 400) {
+    throw new AuthError(
+      'INVALID_INPUT',
+      'Some of these details were not accepted. Check your name, email and password and try again.'
+    );
+  }
+
+  throw new AuthError(
+    'SERVER_ERROR',
+    "Your account wasn't created because something went wrong on our side. Try again in a moment."
+  );
 };

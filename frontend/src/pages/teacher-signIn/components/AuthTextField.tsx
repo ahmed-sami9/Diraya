@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type InputHTMLAttributes } from 'react';
+import { useState, type ComponentType, type InputHTMLAttributes, type Ref } from 'react';
 import { EyeIcon } from '../../../components/icons/index';
 
 interface AuthTextFieldProps
@@ -10,6 +10,9 @@ interface AuthTextFieldProps
   error?: string;
   // Classes for the outer wrapper, used for the spacing between fields.
   className?: string;
+  // Lets a parent reach the <input>, for example to focus it. It is not
+  // listed in the function below, so it travels inside `inputProps`.
+  ref?: Ref<HTMLInputElement>;
 }
 
 // Only one set of border/focus colours is applied at a time, so the error
