@@ -1,25 +1,23 @@
-import {Pool} from "pg"
-import dotenv from "dotenv"
-dotenv.config()
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const pool = new Pool({
-  host: "localhost",
+  host: 'localhost',
   port: 5432,
-  database: "diraya_app_db",
-  user: "postgres",
-  password: "Abcd1910@@@@@",
+  database: 'diraya_app_db',
+  user: 'postgres',
+  password: process.env.DB_PASSWORD,
 });
 
-// test the connection immediately
-pool.connect()
-  .then(() => console.log("✅ Connected to PostgreSQL"))
-  .catch((err) => console.error("❌ Connection failed:", err.message));
+export const connectDB = async () => {
+  try {
+    await pool.query('SELECT 1');
+    console.log('Connected to PostgreSQL');
+  } catch (err: any) {
+    console.error(' Database Connection failed:', err.message);
+    process.exit(1); // Stop the app if DB fails
+  }
+};
 
-export default pool;
-// dotenv.config()
-// const connectionString = process.env.DATABASE_URL
-// const pool = new Pool({
-//     connectionString: connectionString
-// })
-
-// export default pool
+export { pool };

@@ -1,17 +1,20 @@
-import pool from "./src/config/db";
-console.log("server.ts is running")
-async function createUser(name:string, email:string) {
-  const { rows } = await pool.query(
-    `INSERT INTO users (name, email)
-     VALUES ($1, $2) RETURNING *`,
-    [name, email] // values for $1, $2
-  );
-return rows[0]
-}  
-async function main() {
-  const user = await createUser("test", "test");
-  console.log(user);
-  await pool.end(); // closes the connection so the process exits cleanly
-}
+import dotenv from 'dotenv';
+dotenv.config(); // ✅ Run this first before importing other internal modules
 
-main().catch(console.error);
+import app from './src/app';
+import { connectDB } from './src/config/db';
+
+const port = process.env.PORT || 3000;
+
+async function start() {
+  try {
+    await connectDB();
+    app.listen(port, () => {
+      console.log(`server is listening on port ${port}`);
+    });
+  } catch (error) {
+    console.error('startup crash:', error);
+    process.exit(1);
+  }
+}
+start();

@@ -1,0 +1,14 @@
+export { default as MailIcon } from './MailIcon';
+export { default as LockIcon } from './LockIcon';
+export { default as EyeIcon } from './EyeIcon';
+export { default as UserIcon } from './UserIcon';
+export { default as XIcon } from './XIcon';
+export { default as AlertCircleIcon } from './AlertCircleIcon';
+export { default as LogoutIcon } from './LogoutIcon';
+export { default as SettingsIcon } from './SettingsIcon';
+export { default as HomeIcon } from './HomeIcon';
+export { default as PaymentsIcon } from './PaymentsIcon';
+export { default as ExamsIcon } from './ExamsIcon';
+export { default as StudentsIcon } from './StudentsIcon';
+export { default as CloseIcon } from './CloseIcon';
+export { default as HamburgerIcon } from './HamburgerIcon';

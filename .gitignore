@@ -1,5 +1,11 @@
-backend/node_modules
-frontend/node_modules
-
-frontend/.env.local
-backend/.env
+# Dependencies (any folder)
+node_modules/
+# Secrets and local settings (any folder)
+.env
+.env.*
+!.env.example
+# Build output
+dist/
+# Windows and editor files
+desktop.ini
+.vscode/
