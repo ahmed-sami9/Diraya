@@ -29,6 +29,10 @@ type AuthContextType = {
 
   authCheckError: string | null;
 
+  // Asks the server again after the first check failed. Resolves to true
+  // when it got an answer (signed in or not), false when it still failed.
+  retryAuthCheck: () => Promise<boolean>;
+
   logout: () => Promise<void>;
 };
 
@@ -60,6 +64,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Keep the same object when nothing changed, so the app doesn't re-render.
     setUser((previous) => (previous?.id === currentUser?.id ? previous : currentUser));
+
+    // The server answered, so any earlier "couldn't reach it" is over. This
+    // also lets the background re-checks below recover by themselves.
+    setAuthCheckError(null);
+  };
+
+  // Used by the "Try again" buttons. Only one request instead of reloading
+  // the whole page, so it's quick and the screen doesn't flash white.
+  const retryAuthCheck = async () => {
+    try {
+      await checkSession();
+
+      return true;
+    } catch (error) {
+      console.error(error);
+
+      return false;
+    }
   };
 
   /*
@@ -109,6 +131,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
    * 1. Another tab says "sign-in state changed" (instant sync).
    * 2. The user comes back to this tab (also catches a session that expired
    *    while the tab was in the background).
+   * 3. The device reconnects to the internet, so an "offline" error screen
+   *    clears itself without a click.
    */
   useEffect(() => {
     // On failure (for example the network is down) keep what we have.
@@ -125,11 +149,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     authChannel.current = channel;
     channel?.addEventListener('message', recheck);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', recheck);
 
     return () => {
       authChannel.current = null;
       channel?.close();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', recheck);
     };
   }, []);
 
@@ -172,6 +198,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser,
         isAuthChecking,
         authCheckError,
+        retryAuthCheck,
         logout,
       }}
     >

@@ -1,212 +1,105 @@
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useRetry } from '../hooks/useRetry';
+import { CONNECTION_COPY } from '../utils/connectionProblem';
+
+import RefreshIcon from './icons/RefreshIcon';
+
 type ConnectionErrorProps = {
-  onRetry: () => void;
+  // Asks the server again. Resolves to true when it answered.
+  onRetry: () => Promise<boolean>;
 };
 
+// The full-page error. Only for when the app can't work at all: we couldn't
+// ask the server who is signed in, so there is nothing safe to show.
+// (When only one part of a page fails, SectionError is used instead.)
+//
+// It tells apart "you're offline" from "our server isn't answering", because
+// the two need different advice. When the device comes back online, the
+// session is checked again automatically (see AuthContext), so this screen
+// clears itself.
 function ConnectionError({ onRetry }: ConnectionErrorProps) {
+  const isOnline = useOnlineStatus();
+  const { isRetrying, stillFailing, retry } = useRetry(onRetry);
+
+  const copy = isOnline ? CONNECTION_COPY.server : CONNECTION_COPY.offline;
+
   return (
-    <main
-      className="
-        min-h-screen
-        w-full
-        bg-[#F9FAFF]
-        flex
-        flex-col
-        relative
-        overflow-hidden
-      "
-    >
-      {/* Diraya branding */}
-      <header
-        className="
-          absolute
-          top-6
-          left-6
-
-          sm:top-8
-          sm:left-10
-
-          lg:top-10
-          lg:left-14
-        "
-      >
+    <main className="relative flex min-h-screen w-full flex-col overflow-hidden bg-page">
+      {/* Brand. A label, not a heading: the heading is the message below. */}
+      <header className="absolute left-6 top-6 sm:left-10 sm:top-8 lg:left-14 lg:top-10">
         <div className="flex items-center gap-3">
+          {/* Dark mark on the light theme, light mark on the dark theme. */}
           <img
             src="/diraya-logo-dark.png"
-            alt="Diraya logo"
-            className="
-              w-11
-              h-auto
-
-              sm:w-12
-            "
+            alt=""
+            className="h-auto w-10 dark:hidden sm:w-11"
+          />
+          <img
+            src="/diraya-logo-light.png"
+            alt=""
+            className="hidden h-auto w-10 dark:block sm:w-11"
           />
 
           <div>
-            <h1
-              className="
-                text-xl
-                sm:text-2xl
-                font-bold
-                text-[#080D36]
-                leading-tight
-              "
-            >
-              Diraya
-            </h1>
-
-            <p
-              className="
-                mt-0.5
-                text-xs
-                sm:text-sm
-                text-[#737A99]
-              "
-            >
-              Educational Management System
-            </p>
+            <p className="text-lg font-bold leading-tight text-ink sm:text-xl">Diraya</p>
+            <p className="mt-0.5 text-xs text-ink-muted">Educational Management System</p>
           </div>
         </div>
       </header>
 
-      {/* Main error content */}
-      <section
-        className="
-          flex-1
-          flex
-          items-center
-          justify-center
-
-          px-5
-          pt-28
-          pb-10
-        "
-      >
-        <div
-          className="
-            w-full
-            max-w-[760px]
-
-            flex
-            flex-col
-            items-center
-            text-center
-          "
-        >
-          {/* Illustration */}
+      <section className="flex flex-1 items-center justify-center px-5 pb-10 pt-28">
+        <div className="flex w-full max-w-[640px] flex-col items-center text-center">
+          {/* width/height stop the text jumping down when the image loads. */}
           <img
-            src="/disconnected-illustration.png"
+            src="/disconnected-illustration.webp"
             alt=""
-            aria-hidden="true"
+            width={1040}
+            height={620}
             draggable={false}
-            className="
-              w-[82%]
-              max-w-[430px]
-              h-auto
-              object-contain
-
-              sm:w-[70%]
-              sm:max-w-[480px]
-
-              lg:max-w-[520px]
-            "
+            className="h-auto w-[82%] max-w-[420px] select-none sm:max-w-[460px]"
           />
 
-          {/* Heading */}
-          <h2
-            className="
-              mt-5
+          {/* role="alert" makes screen readers announce the problem. */}
+          <div role="alert">
+            <h1 className="mt-6 text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-3xl lg:text-[34px]">
+              {copy.title}
+            </h1>
 
-              text-[28px]
-              sm:text-3xl
-              lg:text-4xl
+            <p className="mx-auto mt-3 max-w-[460px] text-[15px] leading-relaxed text-ink-secondary sm:text-base">
+              {copy.message}
+            </p>
+          </div>
 
-              font-bold
-              leading-tight
-              text-[#080D36]
-            "
-          >
-            We&apos;re having trouble connecting
-          </h2>
-
-          {/* Description */}
-          <p
-            className="
-              mt-4
-              max-w-[620px]
-
-              text-sm
-              sm:text-base
-              lg:text-lg
-
-              leading-relaxed
-              text-[#737A99]
-            "
-          >
-            We couldn&apos;t connect to Diraya to open your workspace.
-            <br className="hidden sm:block" />
-            Check your connection or try again in a moment.
-          </p>
-
-          {/* Retry */}
           <button
             type="button"
-            onClick={onRetry}
+            onClick={retry}
+            disabled={isRetrying}
+            aria-busy={isRetrying}
             className="
-              mt-8
-
-              min-w-[190px]
-              h-[52px]
-
-              flex
-              items-center
-              justify-center
-              gap-3
-
-              px-7
-
-              bg-blue-600
-              text-white
-
-              rounded-xl
-
-              text-base
-              font-semibold
-
+              mt-8 flex h-12 min-w-[180px] items-center justify-center gap-2.5
+              rounded-xl bg-primary px-7
+              text-[15px] font-semibold text-white
               shadow-sm
-
               cursor-pointer
-
-              transition-all
-              duration-200
-
-              hover:bg-blue-700
-              hover:shadow-md
-
-              active:scale-[0.98]
-
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-blue-500
-              focus-visible:ring-offset-2
+              transition-colors
+              hover:bg-primary-hover
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+              disabled:cursor-wait disabled:opacity-80
             "
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-              <path d="M21 3v6h-6" />
-            </svg>
-            Try again
+            <RefreshIcon
+              className={`h-5 w-5 ${isRetrying ? 'animate-spin motion-reduce:animate-none' : ''}`}
+            />
+            {isRetrying ? 'Trying…' : 'Try again'}
           </button>
+
+          {/* Says the click did something, even when the answer is "not yet". */}
+          <p
+            aria-live="polite"
+            className="mt-4 min-h-5 text-sm text-ink-muted"
+          >
+            {stillFailing && 'Still no answer. Please try again in a little while.'}
+          </p>
         </div>
       </section>
     </main>

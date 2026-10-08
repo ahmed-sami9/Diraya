@@ -7,7 +7,7 @@ type ProtectedRouteProps = {
 };
 
 function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
-  const { user, isAuthChecking, authCheckError } = useAuth();
+  const { user, isAuthChecking, authCheckError, retryAuthCheck } = useAuth();
 
   const location = useLocation();
 
@@ -23,8 +23,11 @@ function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
 
   // Don't incorrectly tell the user they're logged out
   // if the backend itself could not be reached.
-  if (authCheckError) {
-    return <ConnectionError onRetry={() => window.location.reload()} />;
+  //
+  // Checked only when there is no user: if a sign-in succeeded after the
+  // first check failed, the user is known and the old error no longer matters.
+  if (!user && authCheckError) {
+    return <ConnectionError onRetry={retryAuthCheck} />;
   }
 
   // We KNOW the user isn't authenticated.

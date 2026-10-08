@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import type { GradeSummary } from '../../../api/students/grades';
 import PlusIcon from '../../../components/icons/PlusIcon';
+import SectionError from '../../../components/SectionError';
 import { useDelayedFlag } from '../../../hooks/useDelayedFlag';
 import { useGrades } from '../../../hooks/students/useGrades';
 import { pluralize } from '../../../utils/formatSession';
@@ -96,30 +97,11 @@ function StudentsPage() {
       {status === 'loading' && <GradesSkeleton />}
 
       {status === 'error' && (
-        <div
-          role="alert"
-          className="
-            flex flex-col items-center gap-3
-            rounded-[14px] border border-border bg-surface
-            px-6 py-10 text-center
-          "
-        >
-          <p className="font-semibold text-ink">We couldn't load your grades</p>
-          <p className="max-w-sm text-sm text-ink-secondary">{loadError}</p>
-          <button
-            type="button"
-            onClick={reload}
-            className="
-              mt-1 h-11 rounded-[10px] border border-border bg-surface px-[18px]
-              text-sm font-semibold text-ink
-              cursor-pointer
-              hover:bg-surface-hover
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
-            "
-          >
-            Try again
-          </button>
-        </div>
+        <SectionError
+          title="We couldn’t load your grades"
+          error={loadError}
+          onRetry={reload}
+        />
       )}
 
       {status === 'ready' && grades.length === 0 && (

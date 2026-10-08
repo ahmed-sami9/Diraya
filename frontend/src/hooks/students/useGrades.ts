@@ -20,7 +20,9 @@ type GradesStatus = 'loading' | 'error' | 'ready';
 export function useGrades() {
   const [grades, setGrades] = useState<GradeSummary[]>([]);
   const [status, setStatus] = useState<GradesStatus>('loading');
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // The error itself, not just its text: the error screen reads it to tell
+  // "you're offline" apart from "the server isn't answering".
+  const [loadError, setLoadError] = useState<unknown>(null);
 
   // Changing this number runs the loading effect again ("Try again").
   const [reloadKey, setReloadKey] = useState(0);
@@ -39,9 +41,7 @@ export function useGrades() {
         if (isAbortError(error)) return;
 
         console.error(error);
-        setLoadError(
-          error instanceof Error ? error.message : 'Could not load your grades. Please try again.'
-        );
+        setLoadError(error);
         setStatus('error');
       });
 
