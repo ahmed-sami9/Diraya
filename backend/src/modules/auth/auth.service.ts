@@ -1,6 +1,6 @@
 import { pool } from '../../config/db';
 import {
-  createTeacher,
+  createUnverifiedTeacher,
   findTeacherByEmail,
   findTeacherByGoogleId,
   createOrLinkGoogleTeacher,
@@ -9,7 +9,8 @@ import {
 import { hashPassword, verifyPassword } from './password';
 import { AuthErrors } from './auth.errors';
 import { startTeacherSession } from './auth.session.service';
-import { verifyGoogleCredential } from './auth.google';
+import { getGoogleProfileFromCode } from './auth.google';
+import { sendVerificationEmail } from './auth.emailVerification.service';
 
 export async function loginTeacher(email: string, password: string, rememberMe = false) {
   const teacher = await findTeacherByEmail(email);
@@ -22,6 +23,12 @@ export async function loginTeacher(email: string, password: string, rememberMe =
 
   if (!isPasswordValid) {
     throw AuthErrors.invalidCredentials();
+  }
+
+  // Checked only after the password, so this message is never shown to
+  // someone who is just guessing at email addresses.
+  if (!teacher.email_verified) {
+    throw AuthErrors.emailNotVerified();
   }
 
   const { token, expiresAt } = await startTeacherSession(String(teacher.id), rememberMe);
@@ -38,45 +45,37 @@ export async function loginTeacher(email: string, password: string, rememberMe =
   };
 }
 
+// Password sign-up. It creates the account but does NOT sign the teacher in:
+// they first have to click the link we email them, which proves the address
+// is theirs. Signing in happens in verifyEmail (auth.emailVerification.service).
 export async function signUpTeacher(credentials: {
   email: string;
   password: string;
   fullName: string;
 }) {
-  const existingTeacher = await findTeacherByEmail(credentials.email);
-
-  if (existingTeacher) {
-    throw AuthErrors.emailTaken();
-  }
-
   const passwordHash = await hashPassword(credentials.password);
 
-  const teacher = await createTeacher({
+  const teacher = await createUnverifiedTeacher({
     email: credentials.email,
     fullName: credentials.fullName,
     passwordHash,
   });
 
-  // Signup signs in automatically with a normal session.
-  const { token, expiresAt } = await startTeacherSession(String(teacher.id), false);
+  // null means a verified teacher already owns this email.
+  if (!teacher) {
+    throw AuthErrors.emailTaken();
+  }
 
-  return {
-    user: {
-      id: String(teacher.id),
-      name: teacher.full_name,
-      email: teacher.email,
-      role: 'teacher' as const,
-    },
-    token,
-    expiresAt,
-  };
+  await sendVerificationEmail(teacher);
+
+  return { email: teacher.email as string };
 }
 
 // Google sign-in and sign-up in one step: a returning Google user is signed
 // in, a new one gets an account created (or linked to their existing email).
-export async function loginTeacherWithGoogle(credential: string, rememberMe = false) {
-  // 1. Ask Google whether the token is real and meant for this app.
-  const profile = await verifyGoogleCredential(credential);
+export async function loginTeacherWithGoogle(code: string, rememberMe = false) {
+  // 1. Exchange the one-time code with Google for a verified profile.
+  const profile = await getGoogleProfileFromCode(code);
 
   // 2. Only trust the email if Google has confirmed the person owns it.
   if (!profile.emailVerified) {
@@ -114,7 +113,7 @@ export async function loginTeacherWithGoogle(credential: string, rememberMe = fa
 export async function getTeacherById(userId: string) {
   const result = await pool.query(
     `
-      SELECT id, full_name, email
+      SELECT id, full_name, email, is_demo
       FROM teachers
       WHERE id = $1
     `,
@@ -132,5 +131,8 @@ export async function getTeacherById(userId: string) {
     name: teacher.full_name,
     email: teacher.email,
     role: 'teacher' as const,
+    // Lets the frontend know, after a page refresh too, that this is a
+    // temporary demo account.
+    isDemo: teacher.is_demo === true,
   };
 }

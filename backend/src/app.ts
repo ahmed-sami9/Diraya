@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 
 import { errorHandler } from './middlware/errorHandler';
+import { getFrontendOrigin } from './config/frontendOrigin';
 
 import authRoutes from './modules/auth/auth.routes';
 import teacherRoutes from './modules/teacher/teacher.routes';
@@ -12,10 +13,18 @@ dotenv.config();
 
 const app = express();
 
-const frontendOrigin = new URL(
-  process.env.FRONTEND_ORIGIN ??
-    (process.env.NODE_ENV === 'production' ? 'https://diraya.vercel.app' : 'http://localhost:5173')
-).origin;
+// Hosting platforms (Render, Railway, Fly...) put a proxy in front of the app,
+// so every request appears to come from the proxy's address. Without this
+// line the rate limiters would count ALL visitors as one person, and a few
+// failed logins by anyone would lock everybody out. With it, Express reads
+// the real visitor address that the proxy passes along.
+//
+// "1" means: trust exactly one proxy. Locally there is none, so it stays off.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+const frontendOrigin = getFrontendOrigin();
 
 app.use(
   cors({

@@ -13,6 +13,8 @@ import { verifyAccessToken, isInvalidTokenError } from './auth.token';
 
 import { revokeTeacherSession } from './auth.session.repository';
 
+import { deleteDemoTeacher } from '../demo/demo.repository';
+
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, password, rememberMe } = req.body;
@@ -34,9 +36,9 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
 
 export async function googleLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { credential, rememberMe } = req.body;
+    const { code, rememberMe } = req.body;
 
-    const { user, token, expiresAt } = await loginTeacherWithGoogle(credential, rememberMe);
+    const { user, token, expiresAt } = await loginTeacherWithGoogle(code, rememberMe);
 
     setAuthCookie(res, token, rememberMe, expiresAt);
 
@@ -53,16 +55,20 @@ export async function googleLogin(req: Request, res: Response, next: NextFunctio
 
 export async function signup(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { user, token, expiresAt } = await signUpTeacher({
+    const { email } = await signUpTeacher({
       email: req.body.email,
       password: req.body.password,
       fullName: req.body.fullName,
     });
 
-    setAuthCookie(res, token, false, expiresAt);
-
+    // No cookie here on purpose. The teacher is signed in only after they
+    // confirm their email (see auth.emailVerification.controller.ts).
     res.setHeader('Cache-Control', 'no-store');
-    res.status(201).json({ user });
+    res.status(201).json({
+      requiresVerification: true,
+      email,
+      message: 'Account created. Check your inbox to confirm your email address.',
+    });
   } catch (error) {
     next(error);
   }
@@ -80,7 +86,16 @@ export async function logoutController(
       try {
         const payload = verifyAccessToken(token);
 
-        await revokeTeacherSession(payload.sid, payload.userId);
+        // A demo account has no password, so once its visitor signs out
+        // nobody can ever get back into it. Delete it now instead of leaving
+        // it for the 24-hour clean-up. Deleting the teacher also deletes its
+        // sessions and data (ON DELETE CASCADE), so there is nothing left to
+        // revoke. For a real teacher this deletes nothing and returns false.
+        const wasDemo = await deleteDemoTeacher(payload.userId);
+
+        if (!wasDemo) {
+          await revokeTeacherSession(payload.sid, payload.userId);
+        }
       } catch (error) {
         // Missing/invalid/expired authentication must not prevent
         // clearing the browser cookie.

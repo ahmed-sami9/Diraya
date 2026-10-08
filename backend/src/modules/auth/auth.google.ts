@@ -15,41 +15,59 @@ export type GoogleProfile = {
 // teachers.full_name is varchar(100).
 const MAX_FULL_NAME_LENGTH = 100;
 
-const client = new OAuth2Client();
+// The frontend opens Google's sign-in as a popup. For that kind of sign-in
+// Google expects this fixed word in place of a real redirect URL.
+const POPUP_REDIRECT_URI = 'postmessage';
 
-function getGoogleClientId(): string {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+function getRequiredEnv(name: 'GOOGLE_CLIENT_ID' | 'GOOGLE_CLIENT_SECRET'): string {
+  const value = process.env[name];
 
-  if (!clientId) {
-    throw new Error('GOOGLE_CLIENT_ID environment variable is missing.');
+  if (!value) {
+    throw new Error(`${name} environment variable is missing.`);
   }
 
-  return clientId;
+  return value;
 }
 
-// Checks the ID token the frontend received from Google's button.
+// Turns the one-time code from Google's sign-in window into a Google profile.
 //
-// The frontend cannot be trusted to say who the user is, so the token is
-// verified here: Google's signature, the expiry, and the "audience", which
-// must be OUR client ID. Without the audience check, a token issued for any
-// other website's Google login would be accepted too.
-export async function verifyGoogleCredential(credential: string): Promise<GoogleProfile> {
+// Two steps, both between this server and Google:
+//
+//   1. Exchange. We send Google the code together with our client secret.
+//      The secret proves the request comes from Diraya's server, so a code
+//      stolen from a browser is useless to anyone else. Google answers with
+//      an ID token, a signed statement of who the person is.
+//
+//   2. Verify. We check the token's signature and expiry, and that its
+//      "audience" is OUR client ID, so a token issued for another website
+//      can never be accepted here.
+export async function getGoogleProfileFromCode(code: string): Promise<GoogleProfile> {
   // Missing configuration must remain a server error, so read it outside
   // the try/catch below.
-  const clientId = getGoogleClientId();
+  const clientId = getRequiredEnv('GOOGLE_CLIENT_ID');
+  const clientSecret = getRequiredEnv('GOOGLE_CLIENT_SECRET');
+
+  const client = new OAuth2Client(clientId, clientSecret, POPUP_REDIRECT_URI);
 
   let payload;
 
   try {
+    const { tokens } = await client.getToken(code);
+
+    if (!tokens.id_token) {
+      throw new Error('Google did not return an ID token.');
+    }
+
     const ticket = await client.verifyIdToken({
-      idToken: credential,
+      idToken: tokens.id_token,
       audience: clientId,
     });
 
     payload = ticket.getPayload();
   } catch (error) {
+    // Typical causes: the code was already used, expired, or is fake.
     console.error(
-      'Google token verification failed:',
+      'Google sign-in failed:',
       error instanceof Error ? error.message : error
     );
 
