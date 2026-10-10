@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom';
 import HamburgerIcon from '../../components/icons/HamburgerIcon';
 import SearchIcon from '../../components/icons/SearchIcon';
 import BellIcon from '../../components/icons/BellIcon';
-import PlusIcon from '../../components/icons/PlusIcon';
 import CloseIcon from '../../components/icons/CloseIcon';
 
 import StudentSearch from './StudentSearch';
+import { DEFAULT_PRIMARY_ACTION } from './teacherActions';
+import { useActiveNavItem } from './teacherNav';
 
 interface TeacherNavbarProps {
   teacherName: string;
@@ -22,7 +23,7 @@ const getGreeting = (date: Date) => {
   return 'Good evening';
 };
 
-// Example output: "Monday, 5 October 2026"
+// Date Format, EXAMPLE: "Monday, 5 October 2026"
 const formatDate = (date: Date) =>
   new Intl.DateTimeFormat('en-GB', {
     weekday: 'long',
@@ -31,6 +32,7 @@ const formatDate = (date: Date) =>
     year: 'numeric',
   }).format(date);
 
+// " Ahmed Sami " -> "Ahmed Sami" -> ["Ahmed", "Sami"] -> "Ahmed"
 const getFirstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
 
 const focusRing =
@@ -44,6 +46,12 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
   const [isPhoneSearchOpen, setPhoneSearchOpen] = useState(false);
 
   const firstName = getFirstName(teacherName);
+
+  // The main button follows the section in the URL: each section may name
+  // its own action, the rest fall back to taking attendance. Only the label,
+  // icon and destination change; the button's place and look never do.
+  const primaryAction = useActiveNavItem()?.primaryAction ?? DEFAULT_PRIMARY_ACTION;
+  const PrimaryIcon = primaryAction.icon;
 
   return (
     // The outer strip is page-coloured, so content scrolling underneath
@@ -129,9 +137,11 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
             <BellIcon className="h-5 w-5" />
           </button>
 
+          {/* The section's main action. On phones only the icon shows, so
+              aria-label keeps the name for screen readers. */}
           <Link
-            to="/teacher/exams"
-            aria-label="Create quiz"
+            to={primaryAction.to}
+            aria-label={primaryAction.label}
             className={`
               flex h-11 w-11 items-center justify-center gap-2
               rounded-[10px] bg-primary
@@ -142,8 +152,8 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
               ${focusRing}
             `}
           >
-            <PlusIcon className="h-[18px] w-[18px]" />
-            <span className="hidden sm:inline">Create quiz</span>
+            <PrimaryIcon className="h-[18px] w-[18px]" />
+            <span className="hidden sm:inline">{primaryAction.label}</span>
           </Link>
         </div>
 

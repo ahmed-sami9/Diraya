@@ -1,14 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
-import {
-  HomeIcon,
-  StudentsIcon,
-  ExamsIcon,
-  PaymentsIcon,
-  SettingsIcon,
-  LogoutIcon,
-  CloseIcon,
-} from '../../components/icons/index.ts';
+import { LogoutIcon, CloseIcon } from '../../components/icons/index.ts';
+
+import { getActiveIndex, navItems } from './teacherNav';
 
 interface TeacherSidebarProps {
   /** Small screens only: whether the drawer is open. Ignored from lg up. */
@@ -19,26 +13,12 @@ interface TeacherSidebarProps {
   onLogout: () => void;
 }
 
-// The single source of truth for the sidebar. Add a page here and in App.tsx.
-const navItems = [
-  { to: '/teacher', label: 'Home', icon: HomeIcon, end: true },
-  { to: '/teacher/students', label: 'Students', icon: StudentsIcon, end: false },
-  { to: '/teacher/exams', label: 'Exams & Marks', icon: ExamsIcon, end: false },
-  { to: '/teacher/payments', label: 'Payments', icon: PaymentsIcon, end: false },
-  { to: '/teacher/settings', label: 'Settings', icon: SettingsIcon, end: false },
-];
+// The links come from navItems (teacherNav.ts), shared with the navbar.
 
 // Each link is 44px tall (h-11) with a 4px gap (gap-1). The sliding highlight
 // relies on these two numbers, so change them together with the classes.
 const NAV_ITEM_HEIGHT = 44;
 const NAV_ITEM_GAP = 4;
-
-const getActiveIndex = (pathname: string) =>
-  navItems.findIndex(({ to, end }) =>
-    end
-      ? pathname === to || pathname === `${to}/`
-      : pathname === to || pathname.startsWith(`${to}/`)
-  );
 
 const getInitials = (name: string) =>
   name

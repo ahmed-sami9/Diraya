@@ -1,5 +1,7 @@
 import { isForeignKeyViolation, isUniqueViolation } from '../../errors/pgErrors';
 
+import { listGroups, type GroupSummary } from '../groups/groups.service';
+
 import { GradeErrors } from './grades.errors';
 import type { GradeInput } from './grades.validation';
 import {
@@ -7,7 +9,7 @@ import {
   findGradeById,
   findGradesByTeacher,
   gradeExists,
-  insertGrade,
+  insertGradeWithFirstGroup,
   updateGrade,
   type GradeRow,
 } from './grades.repository';
@@ -16,6 +18,11 @@ import {
 // must match the migrations (create-grades, create-students).
 const NAME_UNIQUE_INDEX = 'grades_teacher_id_name_unique';
 const STUDENT_GRADE_FOREIGN_KEY = 'students_grade_id_fkey';
+const STUDENT_GROUP_FOREIGN_KEY = 'students_group_in_grade_fkey';
+
+// The group every new grade starts with. A teacher with one class per grade
+// never has to think about groups; one with several renames it and adds more.
+const FIRST_GROUP_NAME = 'Group 1';
 
 // What the API sends for each grade. Matches GradeSummary on the frontend.
 export type GradeSummary = {
@@ -58,7 +65,7 @@ export async function listGrades(teacherId: string): Promise<GradeSummary[]> {
 
 export async function createGrade(teacherId: string, input: GradeInput): Promise<GradeSummary> {
   try {
-    const row = await insertGrade(teacherId, input);
+    const row = await insertGradeWithFirstGroup(teacherId, input, FIRST_GROUP_NAME);
 
     return toGradeSummary(row);
   } catch (error) {
@@ -113,7 +120,12 @@ export async function removeGrade(teacherId: string, gradeId: string): Promise<v
   } catch (error) {
     // A student was added in the split second between the check and the
     // delete. The foreign key caught it.
-    if (isForeignKeyViolation(error, STUDENT_GRADE_FOREIGN_KEY)) {
+    // Either key can be the one that fires: the student points at the grade
+    // directly and through its group.
+    if (
+      isForeignKeyViolation(error, STUDENT_GRADE_FOREIGN_KEY) ||
+      isForeignKeyViolation(error, STUDENT_GROUP_FOREIGN_KEY)
+    ) {
       throw GradeErrors.hasStudents();
     }
 
@@ -129,4 +141,22 @@ export async function removeGrade(teacherId: string, gradeId: string): Promise<v
   }
 
   throw GradeErrors.notFound();
+}
+
+// One grade with its groups, for the grade page. Its students come from
+// their own endpoint (GET /teacher/grades/:gradeId/students): two lists
+// that will each grow their own options (paging, archived students...).
+export async function getGradeDetails(
+  teacherId: string,
+  gradeId: string
+): Promise<{ grade: GradeSummary; groups: GroupSummary[] }> {
+  // Both queries at once: they don't depend on each other.
+  const [row, groups] = await Promise.all([
+    findGradeById(teacherId, gradeId),
+    listGroups(teacherId, gradeId),
+  ]);
+
+  if (!row) throw GradeErrors.notFound();
+
+  return { grade: toGradeSummary(row), groups };
 }

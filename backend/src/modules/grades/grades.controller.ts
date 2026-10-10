@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 
-import { createGrade, editGrade, listGrades, removeGrade } from './grades.service';
+import { createGrade, editGrade, getGradeDetails, listGrades, removeGrade } from './grades.service';
 
 // Controllers only translate HTTP <-> service calls: read the request, call
 // the service, choose the status code. No SQL and no business rules here.
@@ -13,6 +13,21 @@ export async function getGrades(req: Request, res: Response, next: NextFunction)
     const grades = await listGrades(req.user!.userId);
 
     res.status(200).json({ grades });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// GET /teacher/grades/:gradeId
+export async function getGrade(
+  req: Request<{ gradeId: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const details = await getGradeDetails(req.user!.userId, req.params.gradeId);
+
+    res.status(200).json(details);
   } catch (error) {
     next(error);
   }

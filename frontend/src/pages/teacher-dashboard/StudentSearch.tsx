@@ -197,8 +197,7 @@ function StudentSearch({ className = '', autoFocus = false, onSelect }: StudentS
                       />
                     </span>
                     <span className="truncate text-xs text-ink-secondary">
-                      {student.gradeName}
-                      {student.groupName ? ` · ${student.groupName}` : ' · No group yet'}
+                      {student.gradeName} · {student.groupName}
                     </span>
                   </span>
                 </li>

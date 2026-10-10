@@ -50,27 +50,55 @@ export async function findGradeById(teacherId: string, gradeId: string): Promise
   return result.rows[0] ?? null;
 }
 
+// Creates the grade AND its first group, in one transaction: a grade always
+// has at least one group, because every student must be in one. Either both
+// rows exist afterwards, or neither does.
+//
 // Throws a unique violation (grades_teacher_id_name_unique) if the name is taken.
-export async function insertGrade(
+export async function insertGradeWithFirstGroup(
   teacherId: string,
-  input: { name: string; monthlyFee: number | null }
+  input: { name: string; monthlyFee: number | null },
+  firstGroupName: string
 ): Promise<GradeRow> {
-  const result = await pool.query<GradeRow>(
-    `
-      INSERT INTO grades (teacher_id, name, monthly_fee)
-      VALUES ($1, $2, $3)
-      RETURNING
-        id::text AS id,
-        name,
-        monthly_fee,
-        0 AS student_count,
-        0 AS group_count
-    `,
-    [teacherId, input.name, input.monthlyFee]
-  );
+  const client = await pool.connect();
 
-  // INSERT ... RETURNING always returns the row it inserted.
-  return result.rows[0]!;
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query<GradeRow>(
+      `
+        INSERT INTO grades (teacher_id, name, monthly_fee)
+        VALUES ($1, $2, $3)
+        RETURNING
+          id::text AS id,
+          name,
+          monthly_fee,
+          0 AS student_count,
+          1 AS group_count
+      `,
+      [teacherId, input.name, input.monthlyFee]
+    );
+
+    // INSERT ... RETURNING always returns the row it inserted.
+    const grade = result.rows[0]!;
+
+    await client.query(
+      `
+        INSERT INTO groups (teacher_id, grade_id, name)
+        VALUES ($1, $2, $3)
+      `,
+      [teacherId, grade.id, firstGroupName]
+    );
+
+    await client.query('COMMIT');
+
+    return grade;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Returns false when no grade with this id belongs to the teacher.
@@ -95,7 +123,8 @@ export async function updateGrade(
 }
 
 // Deletes the grade only if it has no students. Its groups go with it
-// (ON DELETE CASCADE).
+// (ON DELETE CASCADE), which is safe: a group with students can't exist in
+// a grade with no students.
 //
 // The "no students" check is part of the DELETE itself, so there is no gap
 // between checking and deleting. Returns true when a grade was deleted.

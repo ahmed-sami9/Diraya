@@ -10,6 +10,9 @@
   --color-surface: #ffffff;
   --color-surface-hover: #f3f4f8;
   --color-border: #e4e6ef;
+  /* For dividers that must read at a glance, like the lines between table
+     rows. --color-border stays soft for card and input outlines. */
+  --color-border-strong: #cdd1df;
   --color-ink: #171a2b;
   --color-ink-secondary: #555b70;
   --color-ink-muted: #6a7085;
@@ -31,6 +34,7 @@
   --color-surface: #1c1f3a;
   --color-surface-hover: #252947;
   --color-border: #2e3256;
+  --color-border-strong: #42477a;
   --color-ink: #ecedf7;
   --color-ink-secondary: #b4b8d0;
   --color-ink-muted: #8c91ad;

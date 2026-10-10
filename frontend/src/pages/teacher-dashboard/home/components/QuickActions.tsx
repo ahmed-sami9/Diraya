@@ -2,16 +2,15 @@ import { Link } from 'react-router-dom';
 
 import Card from '../../../../components/Card';
 
-import UserPlusIcon from '../../../../components/icons/UserPlusIcon';
-import ExamsIcon from '../../../../components/icons/ExamsIcon';
-import PlusIcon from '../../../../components/icons/PlusIcon';
-import PaymentsIcon from '../../../../components/icons/PaymentsIcon';
+import { teacherActions } from '../../teacherActions';
 
+// Picked from the shared action list: the navbar's main button is always one
+// of these, so both stay in step when an action is renamed or moved.
 const actions = [
-  { to: '/teacher/students', label: 'Add student', icon: UserPlusIcon },
-  { to: '/teacher/exams', label: 'Create quiz', icon: PlusIcon },
-  { to: '/teacher/exams', label: 'Record marks', icon: ExamsIcon },
-  { to: '/teacher/payments', label: 'Record payment', icon: PaymentsIcon },
+  teacherActions.takeAttendance,
+  teacherActions.addStudent,
+  teacherActions.addExam,
+  teacherActions.recordPayment,
 ];
 
 /** Shortcuts to the things a teacher does most often. */

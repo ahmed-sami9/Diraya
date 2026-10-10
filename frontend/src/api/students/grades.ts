@@ -1,10 +1,13 @@
 import { apiRequest } from '../apiClient';
+import type { GroupSummary } from './groups';
 
 // The grades of the signed-in teacher.
 //
 // Backend endpoints (backend/src/modules/grades):
 //
 //   GET    /teacher/grades            -> 200 { grades: GradeSummary[] }
+//   GET    /teacher/grades/:gradeId   -> 200 { grade: GradeSummary, groups: GroupSummary[] }
+//                                        (next step: not built on the backend yet)
 //   POST   /teacher/grades            -> 201 { grade: GradeSummary }
 //   PATCH  /teacher/grades/:gradeId   -> 200 { grade: GradeSummary }
 //   DELETE /teacher/grades/:gradeId   -> 204
@@ -52,6 +55,23 @@ export async function getGrades(signal?: AbortSignal): Promise<GradeSummary[]> {
   });
 
   return data.grades;
+}
+
+// One grade with its groups: what the grade page needs for its header and
+// group tabs. Its students come from a separate request (getGradeStudents),
+// so each list can grow on its own later (paging, archived students...).
+export type GradeDetails = {
+  grade: GradeSummary;
+  groups: GroupSummary[];
+};
+
+export async function getGradeDetails(
+  gradeId: string,
+  signal?: AbortSignal
+): Promise<GradeDetails> {
+  return apiRequest<GradeDetails>('GET', `/teacher/grades/${encodeURIComponent(gradeId)}`, {
+    signal,
+  });
 }
 
 export async function createGrade(input: GradeInput): Promise<GradeSummary> {

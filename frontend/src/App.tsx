@@ -10,6 +10,7 @@ import TeacherHomePage from './pages/teacher-dashboard/home/TeacherHomePage';
 // Loaded only when the teacher first opens Students. Until it arrives, the
 // layout's <Suspense> shows the page loader (after a short delay).
 const StudentsPage = lazy(() => import('./pages/teacher-dashboard/students/StudentsPage'));
+const GradePage = lazy(() => import('./pages/teacher-dashboard/students/grade/GradePage'));
 
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
@@ -70,7 +71,7 @@ function App() {
           {/* Opened from a grade card. The grade page is the next to build. */}
           <Route
             path="students/grades/:gradeId"
-            element={<p className="text-ink-secondary">Grade page: coming next.</p>}
+            element={<GradePage />}
           />
 
           {/* Opened from the navbar search. Built with the student profile. */}
@@ -79,14 +80,22 @@ function App() {
             element={<p className="text-ink-secondary">Student profile: coming soon.</p>}
           />
 
-          {/* Later:
+          {/* Placeholders, so the navbar button and the quick actions never
+              lead to an empty page. Each is replaced when its page is built. */}
+          <Route
+            path="attendance"
+            element={<p className="text-ink-secondary">Attendance: coming soon.</p>}
+          />
 
           <Route
             path="exams"
-            element={<ExamsPage />}
+            element={<p className="text-ink-secondary">Exams &amp; marks: coming soon.</p>}
           />
 
-          */}
+          <Route
+            path="payments"
+            element={<p className="text-ink-secondary">Payments: coming soon.</p>}
+          />
         </Route>
       </Route>
 
