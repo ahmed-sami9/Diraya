@@ -4,12 +4,12 @@ import { Link, Outlet, useParams } from 'react-router-dom';
 import ChevronRightIcon from '../../../../components/icons/ChevronRightIcon';
 import SectionError from '../../../../components/SectionError';
 import { useDelayedFlag } from '../../../../hooks/useDelayedFlag';
+import { useStudentProfile } from '../../../../hooks/students/useStudentProfile';
 
 import ProfileHeader from './components/ProfileHeader';
 import ProfileTabs from './components/ProfileTabs';
 import SummaryTiles from './components/SummaryTiles';
-import { getPlaceholderProfileState, placeholderActions } from './profilePlaceholder';
-import type { ProfileOutletContext } from './profileTypes';
+import type { ProfileActions, ProfileOutletContext } from './profileTypes';
 
 // The route: /teacher/students/:studentId and its tabs.
 //
@@ -27,10 +27,22 @@ function StudentProfileLayout() {
 }
 
 function StudentProfileContent({ studentId }: { studentId: string }) {
-  // TODO(hook): const { state, actions } = useStudentProfile(studentId);
-  // The two lines below stand in for it until then.
-  const state = getPlaceholderProfileState(studentId);
-  const actions = placeholderActions;
+  const { state, reload, addNote } = useStudentProfile(studentId);
+
+  // What each button does. Notes and Retry go to the server (through the
+  // hook); the rest open dialogs that aren't built yet.
+  const actions: ProfileActions = {
+    addNote,
+    retry: reload,
+    // TODO(dialog): Edit student (PATCH /teacher/students/:studentId)
+    editStudent: () => console.info('TODO: open the Edit student dialog'),
+    // TODO(api): create the parent link (POST /teacher/students/:studentId/share)
+    shareWithParent: () => console.info('TODO: create the parent link'),
+    // TODO(dialog): Move to group (PATCH /teacher/students/:studentId { groupId })
+    moveToGroup: () => console.info('TODO: open the Move to group dialog'),
+    // TODO(dialog): Record payment (POST /teacher/students/:studentId/payments)
+    recordPayment: () => console.info('TODO: open the Record payment dialog'),
+  };
 
   const linkClasses =
     'rounded font-semibold text-ink-secondary hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
