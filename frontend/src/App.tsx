@@ -12,6 +12,23 @@ import TeacherHomePage from './pages/teacher-dashboard/home/TeacherHomePage';
 const StudentsPage = lazy(() => import('./pages/teacher-dashboard/students/StudentsPage'));
 const GradePage = lazy(() => import('./pages/teacher-dashboard/students/grade/GradePage'));
 
+// The student profile: one layout (header, summary, tab bar) and a lazy page
+// per tab, so a tab's code loads only when it's opened.
+const StudentProfileLayout = lazy(
+  () => import('./pages/teacher-dashboard/students/profile/StudentProfileLayout')
+);
+const OverviewTab = lazy(
+  () => import('./pages/teacher-dashboard/students/profile/tabs/OverviewTab')
+);
+const AttendanceTab = lazy(
+  () => import('./pages/teacher-dashboard/students/profile/tabs/AttendanceTab')
+);
+const MarksTab = lazy(() => import('./pages/teacher-dashboard/students/profile/tabs/MarksTab'));
+const PaymentsTab = lazy(
+  () => import('./pages/teacher-dashboard/students/profile/tabs/PaymentsTab')
+);
+const NotesTab = lazy(() => import('./pages/teacher-dashboard/students/profile/tabs/NotesTab'));
+
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -74,11 +91,35 @@ function App() {
             element={<GradePage />}
           />
 
-          {/* Opened from the navbar search. Built with the student profile. */}
+          {/* A student's profile, opened from the grade table or the navbar
+              search. Each tab is a child route rendered in the layout's
+              <Outlet />. "grades" above is a fixed word, so React Router
+              always prefers it over this :studentId. */}
           <Route
             path="students/:studentId"
-            element={<p className="text-ink-secondary">Student profile: coming soon.</p>}
-          />
+            element={<StudentProfileLayout />}
+          >
+            <Route
+              index
+              element={<OverviewTab />}
+            />
+            <Route
+              path="attendance"
+              element={<AttendanceTab />}
+            />
+            <Route
+              path="marks"
+              element={<MarksTab />}
+            />
+            <Route
+              path="payments"
+              element={<PaymentsTab />}
+            />
+            <Route
+              path="notes"
+              element={<NotesTab />}
+            />
+          </Route>
 
           {/* Placeholders, so the navbar button and the quick actions never
               lead to an empty page. Each is replaced when its page is built. */}

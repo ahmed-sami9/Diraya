@@ -58,10 +58,6 @@ app.use('/api/v1', (req, res, next) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/teacher', teacherRoutes);
 
-app.get('/', (_req, res) => {
-  res.send('Hello from the backend');
-});
-
 app.use(errorHandler);
 
 export default app;

@@ -1,13 +1,7 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 
-import {
-  signup,
-  login,
-  googleLogin,
-  logoutController,
-  getCurrentUser,
-} from './auth.controller';
+import { signup, login, googleLogin, logoutController, getCurrentUser } from './auth.controller';
 
 import {
   validateTeacherSignup,
@@ -111,6 +105,12 @@ router.post('/demo', demoLimiter, startDemo);
 router.post('/signup', signupLimiter, validateTeacherSignup, signup);
 
 router.post('/password/forgot', forgotPasswordLimiter, validateForgotPassword, forgotPassword);
+router.post(
+  '/password/reset',
+  resetPasswordLimiter,
+  validateResetPassword,
+  resetPasswordController
+);
 
 router.post(
   '/password/reset/verify',
@@ -118,8 +118,6 @@ router.post(
   validateVerifyResetToken,
   verifyResetToken
 );
-
-router.post('/password/reset', resetPasswordLimiter, validateResetPassword, resetPasswordController);
 
 // Email confirmation after sign-up.
 router.post('/email/verify', resetPasswordLimiter, validateVerifyEmail, verifyEmailController);
