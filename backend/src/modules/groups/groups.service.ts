@@ -16,6 +16,8 @@ import {
 const NAME_UNIQUE_INDEX = 'groups_grade_id_name_unique';
 // Must match migrations/…_require-student-group.js.
 const STUDENT_GROUP_FOREIGN_KEY = 'students_group_in_grade_fkey';
+// Must match migrations/…_create-attendance.js.
+const SESSION_GROUP_FOREIGN_KEY = 'class_sessions_group_in_grade_fkey';
 
 // What the API sends for each group. Matches GroupSummary on the frontend.
 export type GroupSummary = {
@@ -90,6 +92,9 @@ export async function removeGroup(
     // A student was added to this group in the split second between the
     // check and the delete; the foreign key caught it.
     if (isForeignKeyViolation(error, STUDENT_GROUP_FOREIGN_KEY)) throw GroupErrors.hasStudents();
+    // The group has held sessions. The whole transaction rolled back, so any
+    // students it was moving stayed where they were.
+    if (isForeignKeyViolation(error, SESSION_GROUP_FOREIGN_KEY)) throw GroupErrors.hasHistory();
     throw error;
   }
 

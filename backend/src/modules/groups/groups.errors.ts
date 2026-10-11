@@ -28,6 +28,15 @@ export const GroupErrors = {
       'A grade needs at least one group. Rename this one instead of deleting it.'
     ),
 
+  // The group has held classes: deleting it would delete their attendance
+  // history with it, so the database refuses (class_sessions' foreign key).
+  hasHistory: () =>
+    new AppError(
+      409,
+      'GROUP_HAS_HISTORY',
+      'This group has attendance history, so it can’t be deleted. Rename it instead.'
+    ),
+
   // The group picked to receive the students is gone, is the same group, or
   // is in another grade.
   moveTargetNotFound: () =>
