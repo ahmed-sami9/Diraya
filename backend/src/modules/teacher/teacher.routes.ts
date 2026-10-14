@@ -4,6 +4,7 @@ import { authenticate } from '../auth/auth.middleware';
 import gradesRoutes from '../grades/grades.routes';
 import groupsRoutes from '../groups/groups.routes';
 import studentsRoutes from '../students/students.routes';
+import attendanceRoutes from '../attendance/attendance.routes';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.post('/home', authenticate, (req, res) => {
 router.use('/grades', authenticate, gradesRoutes);
 router.use('/groups', authenticate, groupsRoutes);
 router.use('/students', authenticate, studentsRoutes);
+router.use('/attendance', authenticate, attendanceRoutes);
 
 export default router;

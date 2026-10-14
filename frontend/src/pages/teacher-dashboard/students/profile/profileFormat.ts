@@ -1,6 +1,6 @@
 import type { PaymentStatus } from '../../../../api/students/students';
 
-import type { AttendanceRecord, AttendanceStatus } from './profileTypes';
+import type { AttendanceRecord } from './profileTypes';
 
 // Display rules shared by the profile's sections: how a date, a month, a
 // rate or a status looks. One place, so every section says it the same way.
@@ -54,21 +54,9 @@ export const TONE_BAR: Record<Tone, string> = {
 
 /* ------------------------------- Statuses -------------------------------- */
 
-// Each status has a symbol as well as a colour: red and green look alike to
-// colour-blind teachers, so the symbol carries the meaning.
-export const ATTENDANCE_STATUS: Record<
-  AttendanceStatus,
-  { label: string; symbol: string; classes: string }
-> = {
-  present: { label: 'Present', symbol: '✓', classes: 'bg-success text-surface' },
-  late: { label: 'Late', symbol: 'L', classes: 'bg-warning-tint text-warning' },
-  absent: {
-    label: 'Absent',
-    symbol: '✕',
-    classes: 'border-2 border-danger bg-surface text-danger',
-  },
-  excused: { label: 'Excused', symbol: 'E', classes: 'bg-primary-tint text-primary' },
-};
+// The attendance statuses' look (symbol, colour) is shared with the Take
+// attendance page, so it lives in utils/ and is re-exported here.
+export { ATTENDANCE_STATUS } from '../../../../utils/attendanceStatus';
 
 export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; classes: string }> = {
   paid: { label: 'Paid', classes: 'bg-success-tint text-success' },

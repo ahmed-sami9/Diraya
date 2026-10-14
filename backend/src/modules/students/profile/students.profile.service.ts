@@ -1,3 +1,4 @@
+import { toAttendanceRate } from '../../attendance/attendance.rules';
 import { StudentErrors } from '../students.errors';
 import type { PaymentStatus } from '../students.service';
 
@@ -142,7 +143,7 @@ export async function getStudentProfile(
     summary: {
       attendance: {
         // null, not 0, when there is nothing to count yet.
-        rate: counts.total === 0 ? null : Math.round((counts.attended / counts.total) * 100),
+        rate: toAttendanceRate(counts.attended, counts.total),
         attended: counts.attended,
         total: counts.total,
       },

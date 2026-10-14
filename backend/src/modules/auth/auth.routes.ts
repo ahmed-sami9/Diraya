@@ -104,6 +104,8 @@ router.post('/demo', demoLimiter, startDemo);
 
 router.post('/signup', signupLimiter, validateTeacherSignup, signup);
 
+//----------------------------------------------------------------------------
+
 router.post('/password/forgot', forgotPasswordLimiter, validateForgotPassword, forgotPassword);
 router.post(
   '/password/reset',
@@ -111,6 +113,8 @@ router.post(
   validateResetPassword,
   resetPasswordController
 );
+
+//----------------------------------------------------------------------------
 
 router.post(
   '/password/reset/verify',

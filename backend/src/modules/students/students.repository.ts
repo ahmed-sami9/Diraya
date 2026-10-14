@@ -57,6 +57,9 @@ export type GradeStudentRow = {
   name: string;
   group_id: string;
   joined_at: Date;
+  // The numbers behind the attendance rate (see attendance.rules.ts).
+  attended: number;
+  attendance_total: number;
 };
 
 // Only the columns the grade table shows. Phones and notes stay out of this
@@ -69,14 +72,27 @@ export async function findStudentsByGrade(
   const result = await pool.query<GradeStudentRow>(
     `
       SELECT
-        id::text AS id,
-        code,
-        full_name AS name,
-        group_id::text AS group_id,
-        created_at AS joined_at
-      FROM students
-      WHERE teacher_id = $1 AND grade_id = $2
-      ORDER BY full_name, id
+        s.id::text AS id,
+        s.code,
+        s.full_name AS name,
+        s.group_id::text AS group_id,
+        s.created_at AS joined_at,
+        COALESCE(a.attended, 0) AS attended,
+        COALESCE(a.total, 0) AS attendance_total
+      FROM students s
+      -- Each student's counts in one pass over the grade's records, then
+      -- joined by student. LEFT: students with no records keep 0 / 0.
+      LEFT JOIN (
+        SELECT
+          r.student_id,
+          COUNT(*) FILTER (WHERE r.status IN ('present', 'late'))::int AS attended,
+          COUNT(*) FILTER (WHERE r.status <> 'excused')::int AS total
+        FROM attendance_records r
+        WHERE r.grade_id = $2
+        GROUP BY r.student_id
+      ) a ON a.student_id = s.id
+      WHERE s.teacher_id = $1 AND s.grade_id = $2
+      ORDER BY s.full_name, s.id
     `,
     [teacherId, gradeId]
   );
@@ -166,7 +182,9 @@ export async function insertStudentWithCode(
           code,
           full_name AS name,
           group_id::text AS group_id,
-          created_at AS joined_at
+          created_at AS joined_at,
+          0 AS attended,
+          0 AS attendance_total
       `,
       [
         teacherId,

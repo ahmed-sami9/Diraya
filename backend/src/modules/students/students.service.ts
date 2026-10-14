@@ -1,5 +1,7 @@
 import { isForeignKeyViolation } from '../../errors/pgErrors';
 
+import { toAttendanceRate } from '../attendance/attendance.rules';
+
 import { GradeErrors } from '../grades/grades.errors';
 import { gradeExists } from '../grades/grades.repository';
 import { GroupErrors } from '../groups/groups.errors';
@@ -61,9 +63,9 @@ export type GradeStudent = {
   paymentStatus: PaymentStatus | null;
 };
 
-// Attendance, exams and payments don't have tables yet, so the summary is
-// always null ("no data yet") for now. The API shape is final: when those
-// features land, only this function and its query change, not the frontend.
+// Attendance comes from the attendance tables. Exams and payments don't
+// have tables yet, so they are null ("no data yet"). The API shape is final:
+// when those features land, only this function and its query change.
 function toGradeStudent(row: GradeStudentRow): GradeStudent {
   return {
     id: row.id,
@@ -71,7 +73,7 @@ function toGradeStudent(row: GradeStudentRow): GradeStudent {
     name: row.name,
     groupId: row.group_id,
     joinedAt: row.joined_at.toISOString(),
-    attendanceRate: null,
+    attendanceRate: toAttendanceRate(row.attended, row.attendance_total),
     averageMark: null,
     paymentStatus: null,
   };

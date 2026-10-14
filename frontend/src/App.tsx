@@ -29,6 +29,9 @@ const PaymentsTab = lazy(
 );
 const NotesTab = lazy(() => import('./pages/teacher-dashboard/students/profile/tabs/NotesTab'));
 
+// Opened from the navbar's "Take attendance" button and the Home quick actions.
+const AttendancePage = lazy(() => import('./pages/teacher-dashboard/attendance/AttendancePage'));
+
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -125,7 +128,7 @@ function App() {
               lead to an empty page. Each is replaced when its page is built. */}
           <Route
             path="attendance"
-            element={<p className="text-ink-secondary">Attendance: coming soon.</p>}
+            element={<AttendancePage />}
           />
 
           <Route

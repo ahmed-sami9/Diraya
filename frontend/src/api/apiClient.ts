@@ -17,7 +17,8 @@ const RATE_LIMIT_ERROR = 'Too many requests. Please wait a moment and try again.
 const SESSION_EXPIRED_ERROR = 'Your session has ended. Please sign in again.';
 const REQUEST_ERROR = 'Something went wrong. Please try again.';
 
-type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+// PUT: replace a whole thing at a known address (e.g. a full attendance sheet).
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type RequestOptions = {
   // Sent as JSON. Leave it out for GET and DELETE.

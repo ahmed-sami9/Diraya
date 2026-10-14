@@ -9,18 +9,47 @@ export type GradeRow = {
   monthly_fee: number | null;
   student_count: number;
   group_count: number;
+  // The grade's most recent class, across all its groups. All null when no
+  // attendance has been taken yet.
+  last_held_at: Date | null;
+  last_group_name: string | null;
+  last_present_count: number | null;
+  last_total_count: number | null;
 };
 
 // Shared by the list and the single-grade lookup, so both always return the
 // same shape. The counts are subqueries: one row per grade, no GROUP BY.
+//
+// The last session: LEFT JOIN LATERAL runs the small query on the right once
+// per grade ("this grade's newest session"), and LEFT keeps grades that have
+// none. present = present + late, the same rule as the attendance rate.
+// held_at: the class's day and time in Egypt, as one exact moment (noon when
+// the start time isn't known, so the day can't slip in any time zone).
 const GRADE_SUMMARY_SELECT = `
   SELECT
     g.id::text AS id,
     g.name,
     g.monthly_fee,
     (SELECT COUNT(*)::int FROM students s WHERE s.grade_id = g.id) AS student_count,
-    (SELECT COUNT(*)::int FROM groups gr WHERE gr.grade_id = g.id) AS group_count
+    (SELECT COUNT(*)::int FROM groups gr WHERE gr.grade_id = g.id) AS group_count,
+    last.held_at AS last_held_at,
+    last.group_name AS last_group_name,
+    last.present_count AS last_present_count,
+    last.total_count AS last_total_count
   FROM grades g
+  LEFT JOIN LATERAL (
+    SELECT
+      (cs.held_on + COALESCE(cs.start_time, TIME '12:00')) AT TIME ZONE 'Africa/Cairo' AS held_at,
+      gr.name AS group_name,
+      (SELECT COUNT(*)::int FROM attendance_records r
+        WHERE r.session_id = cs.id AND r.status IN ('present', 'late')) AS present_count,
+      (SELECT COUNT(*)::int FROM attendance_records r WHERE r.session_id = cs.id) AS total_count
+    FROM class_sessions cs
+    JOIN groups gr ON gr.id = cs.group_id
+    WHERE cs.grade_id = g.id
+    ORDER BY cs.held_on DESC, cs.id DESC
+    LIMIT 1
+  ) last ON true
 `;
 
 // Oldest first, so grades stay in the order the teacher created them
@@ -74,7 +103,11 @@ export async function insertGradeWithFirstGroup(
           name,
           monthly_fee,
           0 AS student_count,
-          1 AS group_count
+          1 AS group_count,
+          NULL::timestamptz AS last_held_at,
+          NULL::text AS last_group_name,
+          NULL::int AS last_present_count,
+          NULL::int AS last_total_count
       `,
       [teacherId, input.name, input.monthlyFee]
     );

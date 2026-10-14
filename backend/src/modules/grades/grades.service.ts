@@ -42,9 +42,9 @@ export type GradeSummary = {
 
 // Database row (snake_case) -> API shape (camelCase).
 //
-// nextSession and lastSession need group schedules and attendance, which
-// don't exist yet. They are always null until those tables are built; the
-// frontend already shows "No sessions yet" for null.
+// lastSession comes from attendance (the grade's newest session).
+// nextSession needs group schedules, which don't exist yet: always null
+// until they do; the frontend already shows "No sessions yet" for null.
 function toGradeSummary(row: GradeRow): GradeSummary {
   return {
     id: row.id,
@@ -53,7 +53,14 @@ function toGradeSummary(row: GradeRow): GradeSummary {
     studentCount: row.student_count,
     groupCount: row.group_count,
     nextSession: null,
-    lastSession: null,
+    lastSession: row.last_held_at
+      ? {
+          heldAt: row.last_held_at.toISOString(),
+          groupName: row.last_group_name ?? '',
+          presentCount: row.last_present_count ?? 0,
+          totalCount: row.last_total_count ?? 0,
+        }
+      : null,
   };
 }
 
