@@ -35,7 +35,8 @@ export const teacherActions = {
   addExam: {
     label: 'Add exam',
     icon: PlusIcon,
-    to: '/teacher/exams',
+    // ?new=1 opens the Add exam dialog on the exams page.
+    to: '/teacher/exams?new=1',
   },
   recordMarks: {
     label: 'Record marks',

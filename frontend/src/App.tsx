@@ -32,6 +32,11 @@ const NotesTab = lazy(() => import('./pages/teacher-dashboard/students/profile/t
 // Opened from the navbar's "Take attendance" button and the Home quick actions.
 const AttendancePage = lazy(() => import('./pages/teacher-dashboard/attendance/AttendancePage'));
 
+// Opened from the sidebar and the navbar's "Add exam" button.
+const ExamsPage = lazy(() => import('./pages/teacher-dashboard/exams/ExamsPage'));
+const ExamDetailPage = lazy(() => import('./pages/teacher-dashboard/exams/ExamDetailPage'));
+const EnterMarksPage = lazy(() => import('./pages/teacher-dashboard/exams/EnterMarksPage'));
+
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -133,7 +138,19 @@ function App() {
 
           <Route
             path="exams"
-            element={<p className="text-ink-secondary">Exams &amp; marks: coming soon.</p>}
+            element={<ExamsPage />}
+          />
+
+          {/* One exam: its summary and every student's result. */}
+          <Route
+            path="exams/:examId"
+            element={<ExamDetailPage />}
+          />
+
+          {/* Entering one group's marks for an exam. */}
+          <Route
+            path="exams/:examId/marks"
+            element={<EnterMarksPage />}
           />
 
           <Route
