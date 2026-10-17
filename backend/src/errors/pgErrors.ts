@@ -25,3 +25,8 @@ export function isUniqueViolation(error: unknown, constraint: string): boolean {
 export function isForeignKeyViolation(error: unknown, constraint: string): boolean {
   return isPgError(error) && error.code === '23503' && error.constraint === constraint;
 }
+
+// 23514: a row broke a CHECK rule (for example a score above "out of").
+export function isCheckViolation(error: unknown, constraint: string): boolean {
+  return isPgError(error) && error.code === '23514' && error.constraint === constraint;
+}
