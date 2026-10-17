@@ -70,38 +70,55 @@ export type ExamSummaryRow = ExamRow & {
   full_marks: number;
 };
 
+// An exam with its counted results. The LATERAL subquery counts each
+// exam's roster and results; shared by the list and by "one exam".
+const EXAM_SUMMARY_SELECT = `
+  SELECT
+    ${EXAM_COLUMNS},
+    counts.total,
+    counts.entered,
+    counts.average_score,
+    counts.failed,
+    counts.full_marks
+  FROM exams e
+  JOIN grades g ON g.id = e.grade_id
+  CROSS JOIN LATERAL (
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(r.student_id)::int AS entered,
+      AVG(r.score)::float8 AS average_score,
+      COUNT(*) FILTER (WHERE r.score < e.pass_mark)::int AS failed,
+      COUNT(*) FILTER (WHERE r.score = e.max_mark)::int AS full_marks
+    FROM (${EXAM_ROSTER}) roster
+    LEFT JOIN exam_results r
+      ON r.exam_id = e.id AND r.student_id = roster.student_id
+  ) counts
+`;
+
 // Every exam of the teacher with its counted results, newest first.
-// One query: the LATERAL subquery counts each exam's roster and results.
 export async function findExamSummaries(teacherId: string): Promise<ExamSummaryRow[]> {
   const result = await pool.query<ExamSummaryRow>(
-    `
-      SELECT
-        ${EXAM_COLUMNS},
-        counts.total,
-        counts.entered,
-        counts.average_score,
-        counts.failed,
-        counts.full_marks
-      FROM exams e
-      JOIN grades g ON g.id = e.grade_id
-      CROSS JOIN LATERAL (
-        SELECT
-          COUNT(*)::int AS total,
-          COUNT(r.student_id)::int AS entered,
-          AVG(r.score)::float8 AS average_score,
-          COUNT(*) FILTER (WHERE r.score < e.pass_mark)::int AS failed,
-          COUNT(*) FILTER (WHERE r.score = e.max_mark)::int AS full_marks
-        FROM (${EXAM_ROSTER}) roster
-        LEFT JOIN exam_results r
-          ON r.exam_id = e.id AND r.student_id = roster.student_id
-      ) counts
+    `${EXAM_SUMMARY_SELECT}
       WHERE e.teacher_id = $1
-      ORDER BY e.held_on DESC, e.id DESC
-    `,
+      ORDER BY e.held_on DESC, e.id DESC`,
     [teacherId]
   );
 
   return result.rows;
+}
+
+// One exam with its counted results (what "Add exam" answers with).
+export async function findExamSummary(
+  teacherId: string,
+  examId: string
+): Promise<ExamSummaryRow | null> {
+  const result = await pool.query<ExamSummaryRow>(
+    `${EXAM_SUMMARY_SELECT}
+      WHERE e.teacher_id = $1 AND e.id = $2`,
+    [teacherId, examId]
+  );
+
+  return result.rows[0] ?? null;
 }
 
 /* ------------------------------- One exam --------------------------------- */

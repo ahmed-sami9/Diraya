@@ -606,6 +606,12 @@ describe('findExamSummaries: the list’s numbers', () => {
     assert.equal(summary?.entered, rows.filter((r) => r.status !== null).length);
   });
 
+  it('findExamSummary gives the same row for one exam, null for another teacher', async () => {
+    const fromList = (await repo.findExamSummaries(teacherA)).find((e) => e.id === examId);
+    assert.deepEqual(await repo.findExamSummary(teacherA, examId), fromList);
+    assert.equal(await repo.findExamSummary(teacherB, examId), null);
+  });
+
   it('newest first, and only this teacher’s', async () => {
     const list = await repo.findExamSummaries(teacherA);
     const days = list.map((e) => e.held_on);
