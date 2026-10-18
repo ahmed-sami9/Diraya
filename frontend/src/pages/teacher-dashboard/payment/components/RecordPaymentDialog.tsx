@@ -7,33 +7,27 @@ import {
   primaryButtonClasses,
   secondaryButtonClasses,
 } from '../../../../components/formStyles';
+import type { PaymentMethod } from '../../../../api/payments/payments';
+import { useGradePayments } from '../../../../hooks/payments/usePayments';
 import { isValidIsoDay, todayInCairo } from '../../../../utils/cairoDate';
-import type { PaymentMethod } from '../PaymentsPage';
 import {
   METHODS,
-  addMonths,
   currentMonth,
   formatMoney,
   monthName,
+  splitAmount,
   type IsoMonth,
 } from '../paymentsHelpers';
-import {
-  splitAmount,
-  studentMonth,
-  type RecordPaymentInput,
-  type SampleGrade,
-  type SampleStudent,
-  usePaymentsSample,
-} from '../sample/samplePaymentsStore';
 
 interface RecordPaymentDialogProps {
-  grades: SampleGrade[];
+  // The teacher's grades (id and name are enough here).
+  grades: { id: string; name: string }[];
   // The grade the page is showing, if any: picked already, still changeable.
   defaultGradeId?: string | null;
   // Opened from a student's month: start with them and that month.
   initial?: { studentId: string; month: IsoMonth };
-  // Throws if it fails, so the dialog can show why.
-  onSubmit: (input: RecordPaymentInput) => Promise<void> | void;
+  // After a successful save, so the page can refresh what it shows.
+  onRecorded?: () => void;
   onClose: () => void;
 }
 
@@ -44,37 +38,33 @@ const AMOUNT_LIMIT = 100_000;
 
 // "Record payment": money received from one student, for one or more months.
 //
-// The months show what each still needs, so the amount can fill itself in.
-// The teacher can type a different amount (a part payment); a note under the
-// field shows exactly how it will be split across the months.
+// Grade first, then student. Picking a grade loads that grade's payments
+// (the same request as the grade view), which gives both the student list
+// and what each month still needs, so the amount can fill itself in. The
+// teacher can type a different amount (a part payment); a line under the
+// field shows how it will be split. The SERVER does the real split.
 function RecordPaymentDialog({
   grades,
   defaultGradeId = null,
   initial,
-  onSubmit,
+  onRecorded,
   onClose,
 }: RecordPaymentDialogProps) {
-  const { state } = usePaymentsSample();
   const id = useId();
   const gradeRef = useRef<HTMLSelectElement>(null);
   const studentRef = useRef<HTMLSelectElement>(null);
 
-  // Grade first, then student: a short list instead of everyone at once.
-  // Starts from the student's grade, the page's grade, or the only grade.
+  // Starts from the page's grade, or the only grade.
   const [gradeId, setGradeId] = useState(
-    (initial && state.students.find((s) => s.id === initial.studentId)?.gradeId) ??
-      defaultGradeId ??
-      (grades.length === 1 ? grades[0]!.id : '')
+    defaultGradeId ?? (grades.length === 1 ? grades[0]!.id : '')
   );
-
-  const students = useMemo(
-    () =>
-      state.students
-        .filter((s) => s.gradeId === gradeId)
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [state.students, gradeId]
-  );
+  const gradeData = useGradePayments(gradeId || null, currentMonth());
+  const data = gradeData.state.status === 'ready' ? gradeData.state.data : null;
   const grade = grades.find((g) => g.id === gradeId);
+
+  // Made once per dialog: the server refuses the same requestId twice, so
+  // a double click (or a retry after a lost answer) can't pay twice.
+  const [requestId] = useState(() => crypto.randomUUID());
 
   const [studentId, setStudentId] = useState(initial?.studentId ?? '');
   const [months, setMonths] = useState<IsoMonth[]>(initial ? [initial.month] : []);
@@ -88,15 +78,17 @@ function RecordPaymentDialog({
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const student: SampleStudent | undefined = students.find((s) => s.id === studentId);
+  const students = useMemo(
+    () => [...(data?.students ?? [])].sort((a, b) => a.student.name.localeCompare(b.student.name)),
+    [data]
+  );
+  const row = students.find((item) => item.student.id === studentId);
 
-  // The months on offer: three back, this one, two ahead (paying ahead is
-  // common). Each with what it still needs.
+  // The months on offer are the grade's months (three back, this one, one
+  // ahead), each with what it still needs.
   const options = useMemo(() => {
-    if (!student) return [];
-    return [-3, -2, -1, 0, 1, 2].map((offset) => {
-      const month = addMonths(currentMonth(), offset);
-      const info = studentMonth(state, student, month);
+    if (!row) return [];
+    return row.cells.map((info) => {
       const isFuture = info.notDueReason === 'future';
       const needs = isFuture ? info.due : info.left;
       // Nothing to pay for: before they joined, skipped, or fully paid.
@@ -112,9 +104,9 @@ function RecordPaymentDialog({
               : isFuture
                 ? `${needs} ahead`
                 : `${needs} due`;
-      return { month, needs, disabled, hint };
+      return { month: info.month, needs, disabled, hint };
     });
-  }, [state, student]);
+  }, [row]);
 
   const needed = options
     .filter((option) => months.includes(option.month))
@@ -122,10 +114,29 @@ function RecordPaymentDialog({
   const amountText = customAmount ?? (needed > 0 ? String(needed) : '');
   const amount = /^\d+$/.test(amountText.trim()) ? Number(amountText.trim()) : null;
 
+  // A preview only: the server splits it for real.
   const split =
-    student && amount && months.length > 0
-      ? splitAmount({ studentId: student.id, months, amount }, state)
+    amount && months.length > 0
+      ? splitAmount(
+          options.filter((option) => months.includes(option.month)),
+          amount
+        )
       : [];
+
+  // Why the student list is empty or locked, in words.
+  const studentsMessage = !grade
+    ? 'Pick a grade first'
+    : gradeData.state.status === 'loading'
+      ? 'Loading students…'
+      : gradeData.state.status === 'ready'
+        ? 'Choose a student…'
+        : 'Couldn’t load students';
+  const loadError =
+    gradeData.state.status === 'error'
+      ? gradeData.state.error instanceof Error
+        ? gradeData.state.error.message
+        : 'Couldn’t load this grade’s students.'
+      : null;
 
   const clearError = (field: Field) => {
     if (errors[field]) setErrors((previous) => ({ ...previous, [field]: undefined }));
@@ -154,7 +165,7 @@ function RecordPaymentDialog({
 
     const next: FieldErrors = {};
     if (!grade) next.grade = 'Pick the grade first.';
-    else if (!student) next.student = 'Pick the student who paid.';
+    else if (!row) next.student = 'Pick the student who paid.';
     if (months.length === 0) next.months = 'Pick at least one month.';
     if (amount === null || amount < 1) next.amount = 'A whole amount in pounds, like 350.';
     else if (amount > AMOUNT_LIMIT) next.amount = 'That’s more than any fee. Check the amount.';
@@ -174,14 +185,16 @@ function RecordPaymentDialog({
     setFormError(null);
 
     try {
-      await onSubmit({
-        studentId: student!.id,
+      await gradeData.record({
+        requestId,
+        studentId: row!.student.id,
         months,
         amount: amount!,
         paidOn,
         method,
         note: note.trim() || null,
       });
+      onRecorded?.();
       onClose();
     } catch (error) {
       console.error(error);
@@ -287,20 +300,20 @@ function RecordPaymentDialog({
                 setCustomAmount(null);
                 clearError('student');
               }}
-              disabled={isSaving || !grade}
+              disabled={isSaving || !data}
               aria-invalid={Boolean(errors.student)}
               aria-describedby={describedBy('student')}
               className={`${inputClasses(Boolean(errors.student))} cursor-pointer`}
             >
-              <option value="">{grade ? 'Choose a student…' : 'Pick a grade first'}</option>
-              {grade?.groups.map((group) => (
+              <option value="">{studentsMessage}</option>
+              {data?.groups.map((group) => (
                 <optgroup
                   key={group.id}
                   label={group.name}
                 >
                   {students
-                    .filter((s) => s.groupId === group.id)
-                    .map((s) => (
+                    .filter((item) => item.student.groupId === group.id)
+                    .map(({ student: s }) => (
                       <option
                         key={s.id}
                         value={s.id}
@@ -311,16 +324,17 @@ function RecordPaymentDialog({
                 </optgroup>
               ))}
             </select>
-            {fieldError('student')}
+            {fieldError('student') ??
+              (loadError && <p className="text-[13px] text-danger">{loadError}</p>)}
           </div>
         </div>
 
         <fieldset
-          disabled={isSaving || !student}
+          disabled={isSaving || !row}
           className="flex flex-col gap-1.5"
         >
           <legend className={`${labelClasses} mb-1.5`}>For which months</legend>
-          {!student ? (
+          {!row ? (
             <p className="text-[13px] text-ink-muted">Pick a student to see their months.</p>
           ) : (
             <div

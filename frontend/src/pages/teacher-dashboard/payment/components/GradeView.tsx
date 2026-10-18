@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { formatMoney, formatMonth, type IsoMonth } from '../paymentsHelpers';
-import { gradePaymentsFor, studentMonth, usePaymentsSample } from '../sample/samplePaymentsStore';
+import SectionError from '../../../../components/SectionError';
+import { useGradePayments } from '../../../../hooks/payments/usePayments';
 
 import { GradeTiles, MonthGrid, MonthList, StatusLegend } from './GradeSections';
 import StudentMonthDialog from './StudentMonthDialog';
@@ -23,13 +24,8 @@ interface GradeViewProps {
 function GradeView({ gradeId, month, onRecord }: GradeViewProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // TEMPORARY: the sample store stands in for the API (see samplePaymentsStore).
-  const sample = usePaymentsSample();
-
-  const data = useMemo(
-    () => gradePaymentsFor(sample.state, gradeId, month),
-    [sample.state, gradeId, month]
-  );
+  const payments = useGradePayments(gradeId, month);
+  const data = payments.state.status === 'ready' ? payments.state.data : null;
 
   const groupParam = searchParams.get('group');
   const groupId = data?.groups.some((group) => group.id === groupParam) ? groupParam : null;
@@ -49,19 +45,45 @@ function GradeView({ gradeId, month, onRecord }: GradeViewProps) {
     );
   };
 
-  // The page only shows a grade that exists, so this is a safety net.
-  if (!data) return null;
+  if (payments.state.status === 'error') {
+    return (
+      <SectionError
+        title="We couldn’t load this grade’s payments"
+        error={payments.state.error}
+        onRetry={payments.reload}
+      />
+    );
+  }
+
+  if (payments.state.status === 'not-found') {
+    return (
+      <p className="rounded-2xl border border-border bg-surface px-6 py-10 text-center text-sm text-ink-secondary">
+        This grade doesn’t exist any more. Pick another one above.
+      </p>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div
+        role="status"
+        className="h-[420px] animate-pulse rounded-2xl border border-border bg-surface"
+      >
+        <span className="sr-only">Loading</span>
+      </div>
+    );
+  }
 
   // Filters are derived from the URL, never copied into state.
   const rows = data.students.filter(
     (row) => (!groupId || row.student.groupId === groupId) && (!owesOnly || row.owes > 0)
   );
 
-  // The dialog reads the store on every render, so after a payment, a void
-  // or a skip it shows the new numbers straight away.
-  const openStudent = open ? sample.state.students.find((s) => s.id === open.studentId) : undefined;
-  const openInfo = open && openStudent ? studentMonth(sample.state, openStudent, open.month) : null;
-  const grade = sample.state.grades.find((g) => g.id === gradeId)!;
+  // The open cell, read from the latest data on every render: after a
+  // void or a skip the server's fresh answer replaces `data`, and the dialog
+  // shows the new numbers straight away.
+  const openRow = open ? data.students.find((row) => row.student.id === open.studentId) : undefined;
+  const openInfo = open ? openRow?.cells.find((cell) => cell.month === open.month) : undefined;
 
   const pill = (selected: boolean) => `
     h-10 shrink-0 cursor-pointer rounded-[10px] border px-3 text-[13px] transition-colors
@@ -151,22 +173,22 @@ function GradeView({ gradeId, month, onRecord }: GradeViewProps) {
         </div>
       </section>
 
-      {open && openStudent && openInfo && (
+      {open && openRow && openInfo && (
         <StudentMonthDialog
           // A new key per cell: opening another cell starts the dialog fresh.
           key={`${open.studentId}-${open.month}`}
-          student={openStudent}
-          gradeName={grade.name}
-          groupName={grade.groups.find((g) => g.id === openStudent.groupId)?.name ?? ''}
+          student={openRow.student}
+          gradeName={data.grade.name}
+          groupName={openRow.groupName}
           info={openInfo}
           onRecordPayment={() => {
             onRecord(open);
             setOpen(null);
           }}
-          onVoid={sample.voidPayment}
-          onSkip={(reason) => sample.skipMonth(open.studentId, open.month, reason)}
-          onUnskip={() => sample.unskipMonth(open.studentId, open.month)}
-          onSaveNote={(text) => sample.setNote(open.studentId, open.month, text)}
+          onVoid={payments.voidPayment}
+          onSkip={(reason) => payments.skipMonth(open.studentId, open.month, reason)}
+          onUnskip={() => payments.unskipMonth(open.studentId, open.month)}
+          onSaveNote={(text) => payments.saveNote(open.studentId, open.month, text)}
           onClose={() => setOpen(null)}
         />
       )}

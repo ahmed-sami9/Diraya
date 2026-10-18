@@ -1,6 +1,8 @@
 import { todayInCairo } from '../../../utils/cairoDate';
 
-import type { PaymentMethod } from './PaymentsPage';
+import type { IsoMonth, MonthStatus, PaymentMethod } from '../../../api/payments/payments';
+
+export type { IsoMonth, MonthStatus };
 
 // What the payments pages share: months, money, and what the colours mean.
 // Pure functions only, no React.
@@ -9,7 +11,6 @@ import type { PaymentMethod } from './PaymentsPage';
 
 // A month is "YYYY-MM" everywhere (URL, API, state): it sorts as text in
 // the same order as in time, and it can't be confused with a day.
-export type IsoMonth = string;
 
 const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -70,9 +71,6 @@ export const TONE_FILL: Record<Tone, string> = {
 
 /* --------------------------------- Status --------------------------------- */
 
-// Where one student stands in one month.
-export type MonthStatus = 'paid' | 'partly' | 'unpaid' | 'skipped' | 'not-due';
-
 // One look per status, used by the grid, the list and the dialog.
 // "Skipped" is grey on purpose: it's not a debt, so it must not look red.
 export const STATUS_STYLE: Record<MonthStatus, { label: string; cell: string; pill: string }> = {
@@ -110,3 +108,25 @@ export const METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'instapay', label: 'InstaPay' },
   { value: 'vodafone-cash', label: 'Vodafone Cash' },
 ];
+
+/* ---------------------------------- Split --------------------------------- */
+
+// How an amount spreads over the months picked: each month gets what it
+// still needs, oldest first; the last month takes whatever is left (so an
+// overpayment shows instead of disappearing). For the dialog's PREVIEW only:
+// the server applies the same rule when it records the payment.
+export function splitAmount(
+  months: { month: IsoMonth; needs: number }[],
+  amount: number
+): { month: IsoMonth; amount: number }[] {
+  const ordered = [...months].sort((a, b) => a.month.localeCompare(b.month));
+  let remaining = amount;
+
+  return ordered
+    .map((item, index) => {
+      const part = index === ordered.length - 1 ? remaining : Math.min(item.needs, remaining);
+      remaining -= part;
+      return { month: item.month, amount: part };
+    })
+    .filter((part) => part.amount > 0);
+}

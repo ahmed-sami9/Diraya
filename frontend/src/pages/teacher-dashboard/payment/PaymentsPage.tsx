@@ -1,58 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import SectionError from '../../../components/SectionError';
 import PaymentsIcon from '../../../components/icons/PaymentsIcon';
 import PlusIcon from '../../../components/icons/PlusIcon';
 import { primaryButtonClasses } from '../../../components/formStyles';
+import { usePaymentsOverview } from '../../../hooks/payments/usePayments';
+import { useGrades } from '../../../hooks/students/useGrades';
 
 import { AtAGlance, EarlierOwedBanner, LatestPayments } from './components/OverviewSections';
 import GradeView from './components/GradeView';
 import MonthSwitcher from './components/MonthSwitcher';
 import RecordPaymentDialog from './components/RecordPaymentDialog';
-import { overviewFor, usePaymentsSample } from './sample/samplePaymentsStore';
 import { currentMonth, isValidMonth, type IsoMonth } from './paymentsHelpers';
-
-/* ---------------------------------- Types --------------------------------- */
-// These move to api/payments/payments.ts when the API is built. They are
-// written as the server will send them, so the components won't change then.
-
-export type PaymentMethod = 'cash' | 'instapay' | 'vodafone-cash';
-
-// GET /teacher/payments/overview?month=2026-10&gradeId=1 (planned).
-// Every number is worked out by the server from the payments, the fee
-// history, discounts and waivers: nothing here is stored as a total.
-export type PaymentsOverview = {
-  month: IsoMonth;
-  // false until the teacher has recorded their first payment ever: the
-  // page then explains itself instead of showing a wall of zeros.
-  hasAnyPayment: boolean;
-  totals: {
-    expected: number;
-    collected: number;
-    owed: number;
-    students: { paid: number; partly: number; unpaid: number; skipped: number };
-  };
-  // Money still owed from months BEFORE this one, or null when none.
-  earlierOwed: { students: number; amount: number; gradeId: string | null } | null;
-  grades: {
-    id: string;
-    name: string;
-    monthlyFee: number | null;
-    studentCount: number;
-    expected: number;
-    collected: number;
-    owed: number;
-  }[];
-  latest: {
-    id: string;
-    paidOn: string; // "YYYY-MM-DD"
-    student: { id: string; name: string };
-    grade: { id: string; name: string };
-    months: IsoMonth[];
-    method: PaymentMethod;
-    amount: number;
-  }[];
-};
 
 /* ---------------------------------- Page ---------------------------------- */
 
@@ -65,11 +25,9 @@ export type PaymentsOverview = {
 // The month and the grade live in the URL, like every filter in the app:
 // refresh, Back and a shared link all keep them.
 function PaymentsPage() {
-  // TEMPORARY: the sample store stands in for the API, so the page can be
-  // clicked through. This becomes usePaymentsOverview(month, gradeId) and
-  // useGrades(); nothing in the JSX below has to change.
-  const sample = usePaymentsSample();
-  const grades = sample.state.grades;
+  // The teacher's grades: for the chips, the dialog, and "add a grade first".
+  const gradesData = useGrades();
+  const grades = gradesData.grades;
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -87,10 +45,16 @@ function PaymentsPage() {
   // Who the dialog starts with, when opened from a student's month.
   const [prefill, setPrefill] = useState<{ studentId: string; month: IsoMonth } | null>(null);
 
-  const overview = useMemo<PaymentsOverview>(
-    () => overviewFor(sample.state, month, gradeId),
-    [sample.state, month, gradeId]
-  );
+  const overviewData = usePaymentsOverview(month);
+  const overview = overviewData.state.status === 'ready' ? overviewData.state.overview : null;
+
+  // Bumped after a payment is recorded: the grade view remounts and loads
+  // the fresh grade (the overview simply reloads).
+  const [refreshCount, setRefreshCount] = useState(0);
+  const afterRecording = () => {
+    overviewData.reload();
+    setRefreshCount((count) => count + 1);
+  };
 
   const updateParams = (key: 'month' | 'grade' | 'record', value: string | null) => {
     setSearchParams(
@@ -130,7 +94,7 @@ function PaymentsPage() {
 
         {/* Only once there's something to look at: with nothing recorded,
             the empty state's own button is the one next step. */}
-        {overview.hasAnyPayment && (
+        {overview?.hasAnyPayment && (
           <div className="flex flex-wrap items-center gap-2.5">
             <MonthSwitcher
               month={month}
@@ -149,7 +113,26 @@ function PaymentsPage() {
         )}
       </header>
 
-      {!overview.hasAnyPayment ? (
+      {gradesData.status === 'error' ? (
+        <SectionError
+          title="We couldn’t load your grades"
+          error={gradesData.loadError}
+          onRetry={gradesData.reload}
+        />
+      ) : overviewData.state.status === 'error' ? (
+        <SectionError
+          title="We couldn’t load payments"
+          error={overviewData.state.error}
+          onRetry={overviewData.reload}
+        />
+      ) : gradesData.status === 'loading' || !overview ? (
+        <div
+          role="status"
+          className="h-[320px] animate-pulse rounded-2xl border border-border bg-surface"
+        >
+          <span className="sr-only">Loading</span>
+        </div>
+      ) : !overview.hasAnyPayment ? (
         <PaymentsEmptyState
           hasGrades={hasGrades}
           onRecord={() => openRecord()}
@@ -190,9 +173,9 @@ function PaymentsPage() {
           )}
 
           {gradeId ? (
-            // key: switching grades starts the view fresh (no dialog left open).
+            // key: a new grade, or a new payment, starts the view fresh.
             <GradeView
-              key={gradeId}
+              key={`${gradeId}-${refreshCount}`}
               gradeId={gradeId}
               month={month}
               onRecord={openRecord}
@@ -217,7 +200,7 @@ function PaymentsPage() {
           grades={grades}
           defaultGradeId={gradeId}
           {...(prefill ? { initial: prefill } : {})}
-          onSubmit={sample.recordPayment}
+          onRecorded={afterRecording}
           onClose={closeRecord}
         />
       )}

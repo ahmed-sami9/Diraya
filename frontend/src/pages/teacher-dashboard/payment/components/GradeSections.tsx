@@ -6,7 +6,7 @@ import {
   type IsoMonth,
   type MonthStatus,
 } from '../paymentsHelpers';
-import type { GradePayments, StudentMonth } from '../sample/samplePaymentsStore';
+import type { GradePayments, StudentMonth } from '../../../../api/payments/payments';
 
 // The sections of one grade's payments page: the month's tiles, the
 // students × months grid (tablet and up), and the one-month list (phones).

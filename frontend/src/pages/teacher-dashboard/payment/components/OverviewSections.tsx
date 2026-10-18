@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-import type { PaymentMethod, PaymentsOverview } from '../PaymentsPage';
+import type { PaymentMethod, PaymentsOverview } from '../../../../api/payments/payments';
 import {
   TONE_FILL,
   collectedPercent,

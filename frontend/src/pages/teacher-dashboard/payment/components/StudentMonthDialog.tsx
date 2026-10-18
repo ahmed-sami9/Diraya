@@ -9,18 +9,20 @@ import {
   secondaryButtonClasses,
 } from '../../../../components/formStyles';
 import { METHODS, STATUS_STYLE, formatMoney, formatMonth } from '../paymentsHelpers';
-import type { SampleStudent, StudentMonth } from '../sample/samplePaymentsStore';
+import type { PaymentStudent, StudentMonth } from '../../../../api/payments/payments';
 
 interface StudentMonthDialogProps {
-  student: SampleStudent;
+  student: PaymentStudent;
   gradeName: string;
   groupName: string;
   info: StudentMonth;
   onRecordPayment: () => void;
-  onVoid: (paymentId: string, reason: string) => void;
-  onSkip: (reason: string) => void;
-  onUnskip: () => void;
-  onSaveNote: (text: string) => void;
+  // Each one saves on the server, then the page shows the fresh numbers.
+  // They throw if the server refuses, so the dialog can say why.
+  onVoid: (paymentId: string, reason: string) => Promise<void>;
+  onSkip: (reason: string) => Promise<void>;
+  onUnskip: () => Promise<void>;
+  onSaveNote: (text: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -59,6 +61,9 @@ function StudentMonthDialog({
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [note, setNote] = useState(info.note ?? '');
+  // One action at a time; its error (from the server) is shown at the top.
+  const [isBusy, setIsBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const noteChanged = note.trim() !== (info.note ?? '');
 
   const status = STATUS_STYLE[info.status];
@@ -71,15 +76,37 @@ function StudentMonthDialog({
     setReasonError(null);
   };
 
-  const confirmStep = () => {
+  // Runs one server action: busy while it runs, its error shown if it fails.
+  // Returns whether it worked, so the caller can close its inline step.
+  const run = async (action: () => Promise<void>) => {
+    if (isBusy) return false;
+    setIsBusy(true);
+    setActionError(null);
+    try {
+      await action();
+      return true;
+    } catch (error) {
+      console.error(error);
+      setActionError(
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+      );
+      return false;
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const confirmStep = async () => {
     if (!reason.trim()) {
       setReasonError('Write a short reason. It stays on record.');
       document.getElementById(`${id}-reason`)?.focus();
       return;
     }
-    if (step?.kind === 'void') onVoid(step.paymentId, reason.trim());
-    if (step?.kind === 'skip') onSkip(reason.trim());
-    setStep(null);
+    const current = step;
+    const done = await run(() =>
+      current?.kind === 'void' ? onVoid(current.paymentId, reason.trim()) : onSkip(reason.trim())
+    );
+    if (done) setStep(null);
   };
 
   const reasonBox = (label: string, confirmLabel: string) => (
@@ -123,6 +150,8 @@ function StudentMonthDialog({
         <button
           type="button"
           onClick={confirmStep}
+          disabled={isBusy}
+          aria-busy={isBusy}
           className={primaryButtonClasses}
         >
           {confirmLabel}
@@ -149,6 +178,15 @@ function StudentMonthDialog({
       maxWidthClassName="max-w-[500px]"
     >
       <div className="flex flex-col gap-5">
+        {actionError && (
+          <p
+            role="alert"
+            className={formErrorClasses}
+          >
+            {actionError}
+          </p>
+        )}
+
         {/* The math, line by line, so "why do I owe 75?" answers itself. */}
         {info.status === 'not-due' ? (
           <p className="rounded-xl bg-page p-4 text-sm text-ink-secondary">
@@ -283,7 +321,8 @@ function StudentMonthDialog({
           {noteChanged && (
             <button
               type="button"
-              onClick={() => onSaveNote(note)}
+              onClick={() => run(() => onSaveNote(note))}
+              disabled={isBusy}
               className="self-end text-sm font-semibold text-primary hover:underline"
             >
               Save note
@@ -309,7 +348,8 @@ function StudentMonthDialog({
               {info.status === 'skipped' ? (
                 <button
                   type="button"
-                  onClick={onUnskip}
+                  onClick={() => run(onUnskip)}
+                  disabled={isBusy}
                   className={`${secondaryButtonClasses} flex-[1_1_160px]`}
                 >
                   Undo skip
