@@ -46,7 +46,8 @@ export const teacherActions = {
   recordPayment: {
     label: 'Record payment',
     icon: PaymentsIcon,
-    to: '/teacher/payments',
+    // ?record=1 opens the Record payment dialog on the payments page.
+    to: '/teacher/payments?record=1',
   },
 } satisfies Record<string, TeacherAction>;
 

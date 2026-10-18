@@ -37,6 +37,12 @@ const ExamsPage = lazy(() => import('./pages/teacher-dashboard/exams/ExamsPage')
 const ExamDetailPage = lazy(() => import('./pages/teacher-dashboard/exams/ExamDetailPage'));
 const EnterMarksPage = lazy(() => import('./pages/teacher-dashboard/exams/EnterMarksPage'));
 
+// Opened from the sidebar and the navbar's "Record payment" button.
+const PaymentsPage = lazy(() => import('./pages/teacher-dashboard/payment/PaymentsPage'));
+const GradePaymentsPage = lazy(
+  () => import('./pages/teacher-dashboard/payment/GradePaymentsPage')
+);
+
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -155,7 +161,13 @@ function App() {
 
           <Route
             path="payments"
-            element={<p className="text-ink-secondary">Payments: coming soon.</p>}
+            element={<PaymentsPage />}
+          />
+
+          {/* One grade's payments, month by month. */}
+          <Route
+            path="payments/grades/:gradeId"
+            element={<GradePaymentsPage />}
           />
         </Route>
       </Route>
