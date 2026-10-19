@@ -24,3 +24,17 @@
 - Include how the new piece connects to the rest of the codebase (what calls it, what it depends on).
 - Point out the one or two parts most likely to come up in an interview, and how I would explain them in a sentence.
 - Skip the section only for trivial changes (a typo, a colour, a renamed variable) where there is no decision to explain.
+
+## Tests: flag them and plan them with me before implementing
+- Whenever a piece of work needs tests (business rules, money, permissions or ownership, database constraints, concurrency, anything that is costly if it silently breaks), tell me so **before** writing the code.
+- Talk me through the test plan first:
+  - **what** to test (happy path, bad input, someone else's data, rule conflicts, empty state);
+  - **why** each one matters;
+  - **which layer and tool** (repository or API tests with node:test + tsx on the backend; Vitest for pure frontend logic; React Testing Library for key behaviour; Playwright for end-to-end flows).
+- Put testing where the risk is: backend rules first, then pure frontend logic. Don't test thin pass-through code (fetch wrappers, plain markup).
+- Also say when something does **not** need tests, and why.
+
+## Point out best practices I should know, even when I don't ask
+- If a task touches a practice I should know about (testing, security, validation, error handling, accessibility, performance, migrations, git hygiene, etc.) and I haven't mentioned it, raise it.
+- Keep it short: name the practice, why it matters here, and what you would do. Mark the important ones clearly so they stand out.
+- This is a note, not a change: the "never change anything without explicit instruction" rule still applies.

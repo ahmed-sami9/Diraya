@@ -1,26 +1,27 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import type {
-  GradePayments,
-  IsoMonth,
-  PaymentsOverview,
-  RecordPaymentInput,
+import { ApiError, isAbortError } from '../../api/apiClient';
+import {
+  getGradePayments,
+  getPaymentsOverview,
+  recordPayment,
+  saveMonthNote,
+  skipMonth,
+  unskipMonth,
+  voidPayment,
+  type GradePayments,
+  type IsoMonth,
+  type PaymentsOverview,
+  type RecordPaymentInput,
 } from '../../api/payments/payments';
 
-// The payments pages read and write ONLY through these hooks.
+// The payments pages read and write ONLY through these hooks: loading,
+// errors and "what's on screen after a save" live here, not in the pages.
 //
-// NOT CONNECTED YET: the request functions in api/payments don't exist, so
-//   - the overview answers "no payments yet" (the page shows its empty state)
-//   - a grade answers with an error that says so
-//   - every write refuses with the same message, which the dialogs show
-//
-// Connecting = replacing the bodies below with real requests (the same
-// shape as useExam: derived loading, AbortController, reload). The pages
-// and dialogs don't change.
-
-const NOT_CONNECTED = 'Payments aren’t connected to the server yet.';
-
-const notConnected = () => Promise.reject(new Error(NOT_CONNECTED));
+// Both use the same pattern as useExam: "loading" is DERIVED. Each answer
+// is tagged with the request it belongs to (month, grade, reload count); an
+// answer for an older request simply doesn't count. So there's no setState
+// inside an effect, and switching months never flashes the previous one.
 
 export type OverviewState =
   | { status: 'loading' }
@@ -33,77 +34,135 @@ export type GradePaymentsState =
   | { status: 'error'; error: unknown }
   | { status: 'ready'; data: GradePayments };
 
-// What a month looks like before anything is recorded.
-const emptyOverview = (month: IsoMonth): PaymentsOverview => ({
-  month,
-  hasAnyPayment: false,
-  totals: {
-    expected: 0,
-    collected: 0,
-    owed: 0,
-    students: { paid: 0, partly: 0, unpaid: 0, skipped: 0 },
-  },
-  earlierOwed: null,
-  latest: [],
-});
-
 /* -------------------------------- Overview -------------------------------- */
 
+type OverviewResult = { key: string } & (
+  { status: 'error'; error: unknown } | { status: 'ready'; overview: PaymentsOverview }
+);
+
 // GET /teacher/payments/overview?month=
-// The return types are written out, so the pages handle EVERY state
-// (loading, error, ready), not just the one the placeholder returns.
 export function usePaymentsOverview(month: IsoMonth): {
   state: OverviewState;
   reload: () => void;
 } {
-  const state: OverviewState = { status: 'ready', overview: emptyOverview(month) };
+  const [reloadCount, setReloadCount] = useState(0);
+  const requestKey = `${month}:${reloadCount}`;
+  const [result, setResult] = useState<OverviewResult | null>(null);
 
-  const reload = useCallback(() => {}, []);
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getPaymentsOverview(month, controller.signal)
+      .then((overview) => setResult({ key: requestKey, status: 'ready', overview }))
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        console.error(error);
+        setResult({ key: requestKey, status: 'error', error });
+      });
+
+    return () => controller.abort();
+  }, [month, requestKey]);
+
+  const state: OverviewState =
+    result === null || result.key !== requestKey ? { status: 'loading' } : result;
+
+  const reload = useCallback(() => setReloadCount((count) => count + 1), []);
 
   return { state, reload };
 }
 
 /* -------------------------------- One grade ------------------------------- */
 
-const notConnectedError = new Error(NOT_CONNECTED);
-
-// The writes' shapes. Each one answers with the fresh grade (GradePayments),
-// which replaces what's on screen.
+// Each write answers with the fresh grade, which replaces what's on screen.
+// They throw (ApiError) if the server refuses, so the dialogs can say why.
 type GradeWrites = {
-  // POST /teacher/payments
   record: (input: RecordPaymentInput) => Promise<void>;
-  // POST /teacher/payments/:paymentId/void
   voidPayment: (paymentId: string, reason: string) => Promise<void>;
-  // PUT /teacher/payments/students/:studentId/months/:month/skip
   skipMonth: (studentId: string, month: IsoMonth, reason: string) => Promise<void>;
-  // DELETE /teacher/payments/students/:studentId/months/:month/skip
   unskipMonth: (studentId: string, month: IsoMonth) => Promise<void>;
-  // PUT /teacher/payments/students/:studentId/months/:month/note
   saveNote: (studentId: string, month: IsoMonth, text: string) => Promise<void>;
 };
 
-// Not connected: every write refuses with the same clear message.
-const notConnectedWrites: GradeWrites = {
-  record: notConnected,
-  voidPayment: notConnected,
-  skipMonth: notConnected,
-  unskipMonth: notConnected,
-  saveNote: notConnected,
-};
+type GradeResult = { key: string } & (
+  | { status: 'not-found' }
+  | { status: 'error'; error: unknown }
+  | { status: 'ready'; data: GradePayments }
+);
 
 // GET /teacher/payments/grades/:gradeId?month=, and the writes.
-// gradeId null: nothing to load yet (the Record dialog before a grade is
-// picked).
+// gradeId null: nothing to load (the Record dialog before a grade is
+// picked); it stays "loading" and makes no request.
 export function useGradePayments(
   gradeId: string | null,
   month: IsoMonth
 ): { state: GradePaymentsState; reload: () => void } & GradeWrites {
+  const [reloadCount, setReloadCount] = useState(0);
+  const requestKey = `${gradeId}:${month}:${reloadCount}`;
+  const [result, setResult] = useState<GradeResult | null>(null);
+
+  useEffect(() => {
+    if (gradeId === null) return;
+
+    const controller = new AbortController();
+
+    getGradePayments(gradeId, month, controller.signal)
+      .then((data) => setResult({ key: requestKey, status: 'ready', data }))
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return;
+        // 404: deleted, another teacher's, or a mistyped link. Same answer.
+        if (error instanceof ApiError && error.status === 404) {
+          setResult({ key: requestKey, status: 'not-found' });
+          return;
+        }
+        console.error(error);
+        setResult({ key: requestKey, status: 'error', error });
+      });
+
+    return () => controller.abort();
+  }, [gradeId, month, requestKey]);
+
   const state: GradePaymentsState =
-    gradeId === null ? { status: 'loading' } : { status: 'error', error: notConnectedError };
+    result === null || result.key !== requestKey ? { status: 'loading' } : result;
 
-  void month; // part of the request once connected
+  const reload = useCallback(() => setReloadCount((count) => count + 1), []);
 
-  const reload = useCallback(() => {}, []);
+  // Puts the server's answer on screen, as the answer to the current request.
+  const show = useCallback(
+    (data: GradePayments) => setResult({ key: requestKey, status: 'ready', data }),
+    [requestKey]
+  );
 
-  return { state, reload, ...notConnectedWrites };
+  const writes: GradeWrites = {
+    // POST /teacher/payments
+    record: useCallback(
+      async (input: RecordPaymentInput) => show(await recordPayment(input, month)),
+      [show, month]
+    ),
+    // POST /teacher/payments/:paymentId/void
+    voidPayment: useCallback(
+      async (paymentId: string, reason: string) =>
+        show(await voidPayment(paymentId, reason, month)),
+      [show, month]
+    ),
+    // PUT /teacher/payments/students/:studentId/months/:month/skip
+    skipMonth: useCallback(
+      async (studentId: string, skipped: IsoMonth, reason: string) =>
+        show(await skipMonth(studentId, skipped, reason, month)),
+      [show, month]
+    ),
+    // DELETE /teacher/payments/students/:studentId/months/:month/skip
+    unskipMonth: useCallback(
+      async (studentId: string, skipped: IsoMonth) =>
+        show(await unskipMonth(studentId, skipped, month)),
+      [show, month]
+    ),
+    // PUT /teacher/payments/students/:studentId/months/:month/note
+    saveNote: useCallback(
+      async (studentId: string, noted: IsoMonth, text: string) =>
+        show(await saveMonthNote(studentId, noted, text, month)),
+      [show, month]
+    ),
+  };
+
+  return { state, reload, ...writes };
 }
