@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "tsx --env-file=.env.test --test --test-concurrency=1 \"src/**/*.test.ts\"",
+    "migrate:test": "node-pg-migrate up --envPath .env.test",
     "dev": "nodemon --exec tsx server.ts",
     "migrate": "node-pg-migrate"
   },

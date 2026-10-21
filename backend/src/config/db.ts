@@ -2,14 +2,7 @@ import { Pool } from 'pg';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'diraya_app_db',
-  user: 'postgres',
-  password: process.env.DB_PASSWORD,
-});
-
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const connectDB = async () => {
   try {
     await pool.query('SELECT 1');
