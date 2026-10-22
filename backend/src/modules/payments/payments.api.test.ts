@@ -28,12 +28,13 @@ let server: Server;
 let baseUrl = '';
 
 type Call = (path: string, withCookie?: boolean) => Promise<[number, any]>;
+type Send = (method: string, path: string, body?: unknown) => Promise<[number, any]>;
 
 async function one<T>(sql: string, params: unknown[]): Promise<T> {
   return (await pool.query(sql, params)).rows[0] as T;
 }
 
-async function signedInTeacher(name: string): Promise<{ id: string; get: Call }> {
+async function signedInTeacher(name: string): Promise<{ id: string; get: Call; send: Send }> {
   const { id } = await one<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
     [name, `payments-api-${name}-${Date.now()}@example.com`]
@@ -51,7 +52,21 @@ async function signedInTeacher(name: string): Promise<{ id: string; get: Call }>
     return [response.status, text ? JSON.parse(text) : null];
   };
 
-  return { id, get };
+  const send: Send = async (method, path, body) => {
+    const response = await fetch(`${baseUrl}/api/v1/teacher/payments${path}`, {
+      method,
+      headers: {
+        origin: getFrontendOrigin(),
+        cookie: `${AUTH_COOKIE_NAME}=${token}`,
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      body: body === undefined ? null : JSON.stringify(body),
+    });
+    const text = await response.text();
+    return [response.status, text ? JSON.parse(text) : null];
+  };
+
+  return { id, get, send };
 }
 
 async function addGrade(teacherId: string, name: string, fee: number | null) {
@@ -94,6 +109,9 @@ async function addStudent(
 
 let A: Call; // has grades, students and a payment
 let B: Call; // brand new: nothing at all
+let sendA: Send;
+let sendB: Send;
+let teacherA = '';
 const teacherIds: string[] = [];
 let grade = { gradeId: '', groupId: '' };
 let noFeeGrade = { gradeId: '', groupId: '' };
@@ -110,6 +128,9 @@ before(async () => {
   const b = await signedInTeacher('b');
   A = a.get;
   B = b.get;
+  sendA = a.send;
+  sendB = b.send;
+  teacherA = a.id;
   teacherIds.push(a.id, b.id);
 
   grade = await addGrade(a.id, 'Grade 3', 200);
@@ -399,5 +420,279 @@ describe('the response matches the frontend contract', () => {
       'paidOn',
       'voided',
     ]);
+  });
+});
+
+/* ================================= Writes ================================= */
+
+// Their own grade and students, so the reads above keep their numbers.
+describe('writes', () => {
+  let writeGrade = { gradeId: '', groupId: '' };
+  const s = { rec: '', voider: '', skipper: '', noter: '', dup: '' };
+
+  before(async () => {
+    writeGrade = await addGrade(teacherA, 'Grade 2', 200);
+    for (const name of Object.keys(s) as (keyof typeof s)[]) {
+      s[name] = await addStudent(teacherA, writeGrade, `W-${name}`, TWO_AGO);
+    }
+  });
+
+  const rowOf = (data: any, studentId: string) =>
+    data.students.find((row: any) => row.student.id === studentId);
+  const cellOf = (data: any, studentId: string, month: string) =>
+    rowOf(data, studentId).cells.find((cell: any) => cell.month === month);
+
+  const payment = (studentId: string, overrides: Record<string, unknown> = {}) => ({
+    requestId: randomUUID(),
+    studentId,
+    months: [PREV, NOW],
+    amount: 300,
+    paidOn: `${NOW}-01`,
+    method: 'cash',
+    note: null,
+    ...overrides,
+  });
+
+  /* ----------------------------- Record a payment ---------------------------- */
+
+  describe('POST / (record)', () => {
+    it('answers with the fresh grade: 300 over two months is paid, then partly', async () => {
+      const [status, data] = await sendA('POST', `/?month=${NOW}`, payment(s.rec, { note: '  ' }));
+
+      assert.equal(status, 200);
+      assert.equal(data.grade.id, writeGrade.gradeId);
+      assert.equal(data.month, NOW);
+      assert.equal(cellOf(data, s.rec, PREV).status, 'paid');
+      assert.equal(cellOf(data, s.rec, NOW).status, 'partly');
+      assert.equal(cellOf(data, s.rec, NOW).left, 100);
+      // A blank note is stored as no note.
+      assert.equal(cellOf(data, s.rec, NOW).payments[0].note, null);
+    });
+
+    it('answers for the month on screen (?month=)', async () => {
+      const [status, data] = await sendA(
+        'POST',
+        `/?month=${PREV}`,
+        payment(s.rec, { months: [NOW], amount: 100 })
+      );
+
+      assert.equal(status, 200);
+      assert.equal(data.month, PREV);
+      assert.equal(rowOf(data, s.rec).selected.month, PREV);
+    });
+
+    it('a double click: both answers are 200, one payment is saved', async () => {
+      const body = payment(s.dup);
+      const [first, second] = await Promise.all([
+        sendA('POST', `/?month=${NOW}`, body),
+        sendA('POST', `/?month=${NOW}`, body),
+      ]);
+
+      assert.equal(first[0], 200);
+      assert.equal(second[0], 200);
+      const { n } = await one<{ n: number }>(
+        'SELECT COUNT(*)::int AS n FROM payments WHERE student_id = $1',
+        [s.dup]
+      );
+      assert.equal(n, 1);
+    });
+
+    it('a bad body: 400 INVALID_INPUT', async () => {
+      const bad: [string, Record<string, unknown>][] = [
+        ['unknown field', { extra: true }],
+        ['amount 0', { amount: 0 }],
+        ['negative amount', { amount: -5 }],
+        ['amount with piasters', { amount: 10.5 }],
+        ['no months', { months: [] }],
+        ['the same month twice', { months: [NOW, NOW] }],
+        ['two months ahead', { months: [addMonths(NOW, 2)] }],
+        ['a month like 2026-13', { months: ['2026-13'] }],
+        ['paid on a future day', { paidOn: '2099-01-01' }],
+        ['paid on a day that does not exist', { paidOn: '2026-02-30' }],
+        ['unknown method', { method: 'cheque' }],
+        ['requestId not a uuid', { requestId: 'abc' }],
+        ['no studentId', { studentId: undefined }],
+      ];
+
+      for (const [label, overrides] of bad) {
+        const [status, body] = await sendA('POST', `/?month=${NOW}`, payment(s.rec, overrides));
+        assert.equal(status, 400, label);
+        assert.equal(body.code, 'INVALID_INPUT', label);
+      }
+    });
+
+    it('no ?month=: 400', async () => {
+      assert.equal((await sendA('POST', '/', payment(s.rec)))[0], 400);
+    });
+
+    it('a month before the student joined: 400 MONTH_BEFORE_JOINING', async () => {
+      const [status, body] = await sendA(
+        'POST',
+        `/?month=${NOW}`,
+        payment(s.rec, { months: [addMonths(NOW, -3)] })
+      );
+      assert.equal(status, 400);
+      assert.equal(body.code, 'MONTH_BEFORE_JOINING');
+    });
+
+    it("another teacher's student: 404 STUDENT_NOT_FOUND", async () => {
+      const [status, body] = await sendB('POST', `/?month=${NOW}`, payment(s.rec));
+      assert.equal(status, 404);
+      assert.equal(body.code, 'STUDENT_NOT_FOUND');
+    });
+  });
+
+  /* ------------------------------ Void a payment ----------------------------- */
+
+  describe('POST /:paymentId/void', () => {
+    let paymentId = '';
+
+    before(async () => {
+      const [, data] = await sendA('POST', `/?month=${NOW}`, payment(s.voider));
+      paymentId = cellOf(data, s.voider, NOW).payments[0].id;
+    });
+
+    it("another teacher's payment: 404, and it stays counted", async () => {
+      const [status, body] = await sendB('POST', `/${paymentId}/void?month=${NOW}`, {
+        reason: 'x',
+      });
+      assert.equal(status, 404);
+      assert.equal(body.code, 'PAYMENT_NOT_FOUND');
+    });
+
+    it('a blank reason or an extra field: 400', async () => {
+      assert.equal(
+        (await sendA('POST', `/${paymentId}/void?month=${NOW}`, { reason: '  ' }))[0],
+        400
+      );
+      assert.equal(
+        (await sendA('POST', `/${paymentId}/void?month=${NOW}`, { reason: 'x', extra: 1 }))[0],
+        400
+      );
+    });
+
+    it('voids: the months go back to unpaid, and the payment shows why', async () => {
+      const [status, data] = await sendA('POST', `/${paymentId}/void?month=${NOW}`, {
+        reason: ' wrong student ',
+      });
+
+      assert.equal(status, 200);
+      assert.equal(cellOf(data, s.voider, PREV).status, 'unpaid');
+      assert.equal(cellOf(data, s.voider, NOW).status, 'unpaid');
+      assert.equal(cellOf(data, s.voider, NOW).payments[0].voided.reason, 'wrong student');
+    });
+
+    it('voiding twice: 409 PAYMENT_ALREADY_VOIDED', async () => {
+      const [status, body] = await sendA('POST', `/${paymentId}/void?month=${NOW}`, {
+        reason: 'again',
+      });
+      assert.equal(status, 409);
+      assert.equal(body.code, 'PAYMENT_ALREADY_VOIDED');
+    });
+
+    it('a malformed or unknown payment id: 404', async () => {
+      for (const id of ['abc', '999999999']) {
+        const [status, body] = await sendA('POST', `/${id}/void?month=${NOW}`, { reason: 'x' });
+        assert.equal(status, 404, id);
+        assert.equal(body.code, 'PAYMENT_NOT_FOUND', id);
+      }
+    });
+  });
+
+  /* ------------------------------- Skip / unskip ----------------------------- */
+
+  describe('PUT and DELETE /students/:studentId/months/:month/skip', () => {
+    const skipPath = (studentId: string, month: string) =>
+      `/students/${studentId}/months/${month}/skip?month=${NOW}`;
+
+    it('skips: nothing is due and the reason shows', async () => {
+      const [status, data] = await sendA('PUT', skipPath(s.skipper, NOW), { reason: 'Travelling' });
+
+      assert.equal(status, 200);
+      assert.equal(cellOf(data, s.skipper, NOW).status, 'skipped');
+      assert.equal(cellOf(data, s.skipper, NOW).skipReason, 'Travelling');
+    });
+
+    it('a skipped month can not be paid: 409 MONTH_SKIPPED', async () => {
+      const [status, body] = await sendA(
+        'POST',
+        `/?month=${NOW}`,
+        payment(s.skipper, { months: [NOW] })
+      );
+      assert.equal(status, 409);
+      assert.equal(body.code, 'MONTH_SKIPPED');
+    });
+
+    it('undo: the month is due again (and undoing twice is harmless)', async () => {
+      const [status, data] = await sendA('DELETE', skipPath(s.skipper, NOW));
+      assert.equal(status, 200);
+      assert.equal(cellOf(data, s.skipper, NOW).status, 'unpaid');
+
+      assert.equal((await sendA('DELETE', skipPath(s.skipper, NOW)))[0], 200);
+    });
+
+    it('a month with payments: 409 MONTH_HAS_PAYMENTS', async () => {
+      const [status, body] = await sendA('PUT', skipPath(s.rec, PREV), { reason: 'x' });
+      assert.equal(status, 409);
+      assert.equal(body.code, 'MONTH_HAS_PAYMENTS');
+    });
+
+    it('a month before joining: 400 MONTH_BEFORE_JOINING', async () => {
+      const [status, body] = await sendA('PUT', skipPath(s.skipper, addMonths(NOW, -3)), {
+        reason: 'x',
+      });
+      assert.equal(status, 400);
+      assert.equal(body.code, 'MONTH_BEFORE_JOINING');
+    });
+
+    it('a bad month in the path or a blank reason: 400', async () => {
+      for (const month of ['2026-13', 'oct', addMonths(NOW, 2)]) {
+        assert.equal(
+          (await sendA('PUT', skipPath(s.skipper, month), { reason: 'x' }))[0],
+          400,
+          month
+        );
+      }
+      assert.equal((await sendA('PUT', skipPath(s.skipper, NOW), { reason: '' }))[0], 400);
+    });
+
+    it("a malformed id or another teacher's student: 404 STUDENT_NOT_FOUND", async () => {
+      const [status, body] = await sendA('PUT', skipPath('abc', NOW), { reason: 'x' });
+      assert.equal(status, 404);
+      assert.equal(body.code, 'STUDENT_NOT_FOUND');
+
+      assert.equal((await sendB('PUT', skipPath(s.skipper, NOW), { reason: 'x' }))[0], 404);
+      assert.equal((await sendB('DELETE', skipPath(s.skipper, NOW)))[0], 404);
+    });
+  });
+
+  /* ---------------------------------- Notes ---------------------------------- */
+
+  describe('PUT /students/:studentId/months/:month/note', () => {
+    const notePath = `/students/${'{id}'}/months/${NOW}/note?month=${NOW}`;
+    const pathFor = (studentId: string) => notePath.replace('{id}', studentId);
+
+    it('saves the note, trimmed', async () => {
+      const [status, data] = await sendA('PUT', pathFor(s.noter), {
+        text: '  Mom pays on the 15th ',
+      });
+      assert.equal(status, 200);
+      assert.equal(cellOf(data, s.noter, NOW).note, 'Mom pays on the 15th');
+    });
+
+    it('empty text removes it', async () => {
+      const [status, data] = await sendA('PUT', pathFor(s.noter), { text: '' });
+      assert.equal(status, 200);
+      assert.equal(cellOf(data, s.noter, NOW).note, null);
+    });
+
+    it('too long, or missing text: 400', async () => {
+      assert.equal((await sendA('PUT', pathFor(s.noter), { text: 'x'.repeat(301) }))[0], 400);
+      assert.equal((await sendA('PUT', pathFor(s.noter), {}))[0], 400);
+    });
+
+    it("another teacher's student: 404", async () => {
+      assert.equal((await sendB('PUT', pathFor(s.noter), { text: 'x' }))[0], 404);
+    });
   });
 });
