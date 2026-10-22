@@ -6,7 +6,7 @@ import { apiRequest } from '../apiClient';
 // endpoint. The pages never call these directly: they go through
 // hooks/payments, which keeps loading and errors in one place.
 //
-// Endpoints (backend/src/modules/payments, not built yet):
+// Endpoints (backend/src/modules/payments):
 //
 //   Reads
 //   GET  /teacher/payments/overview?month=2026-10           -> PaymentsOverview
@@ -28,7 +28,8 @@ import { apiRequest } from '../apiClient';
 //   PAYMENT_NOT_FOUND       404  no payment with this id for this teacher
 //   PAYMENT_ALREADY_VOIDED  409  voiding a payment twice
 //   MONTH_HAS_PAYMENTS      409  skipping a month that has payments
-//   DUPLICATE_REQUEST       409  the same requestId was already recorded
+//   MONTH_SKIPPED           409  paying a month that is skipped
+//   MONTH_BEFORE_JOINING    400  a month before the student joined
 //
 // Conventions: ids are strings, a month is "YYYY-MM", a day "YYYY-MM-DD",
 // money is whole Egyptian pounds. Every total is worked out by the server
@@ -133,8 +134,8 @@ export type GradePayments = {
 
 // POST /teacher/payments
 // The server splits `amount` over `months`, oldest first; the last month
-// takes what's left. requestId: made once per dialog, so a double click
-// can't record the same payment twice (the server refuses a repeat).
+// takes what's left. requestId: made once per dialog; a repeat is saved
+// once and answered like the first, so a double click can't pay twice.
 export type RecordPaymentInput = {
   requestId: string;
   studentId: string;

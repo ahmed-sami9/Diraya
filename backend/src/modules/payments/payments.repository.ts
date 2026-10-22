@@ -453,7 +453,7 @@ export type RecordPaymentOutcome =
   | { status: 'student-not-found' }
   | { status: 'month-before-joining'; month: IsoMonth }
   | { status: 'month-skipped'; month: IsoMonth }
-  | { status: 'duplicate-request' };
+  | { status: 'duplicate-request'; gradeId: string };
 
 // Oldest month first; the last month takes the remainder, so an overpayment is kept.
 export function splitAmount(
@@ -525,7 +525,7 @@ export async function recordPayment(
     );
 
     const payment = inserted.rows[0];
-    if (!payment) return { status: 'duplicate-request' };
+    if (!payment) return { status: 'duplicate-request', gradeId: student.grade_id };
 
     await client.query(
       `

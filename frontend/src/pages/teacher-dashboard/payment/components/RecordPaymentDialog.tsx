@@ -62,7 +62,7 @@ function RecordPaymentDialog({
   const data = gradeData.state.status === 'ready' ? gradeData.state.data : null;
   const grade = grades.find((g) => g.id === gradeId);
 
-  // Made once per dialog: the server refuses the same requestId twice, so
+  // Made once per dialog: the server saves a repeated requestId once, so
   // a double click (or a retry after a lost answer) can't pay twice.
   const [requestId] = useState(() => crypto.randomUUID());
 

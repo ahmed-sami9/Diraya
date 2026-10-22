@@ -1,7 +1,9 @@
 import { currentMonthInCairo } from '../../utils/cairoDate';
 
 import { GradeErrors } from '../grades/grades.errors';
+import { StudentErrors } from '../students/students.errors';
 
+import { PaymentErrors } from './payments.errors';
 import {
   findEarlierOwed,
   findGrade,
@@ -12,6 +14,11 @@ import {
   findLatestPayments,
   findMonthTotals,
   hasAnyPayment,
+  recordPayment,
+  saveMonthNote,
+  skipMonth,
+  unskipMonth,
+  voidPayment,
   type IsoMonth,
   type MonthStatus,
   type NotDueReason,
@@ -19,6 +26,7 @@ import {
   type PaymentPartRow,
   type StudentMonthRow,
 } from './payments.repository';
+import type { RecordPaymentBody } from './payments.validation';
 
 // Must match frontend/src/api/payments/payments.ts field for field.
 
@@ -219,6 +227,92 @@ export async function getGradePayments(
       partly: selected.filter((cell) => cell.status === 'partly').length,
     },
   };
+}
+
+/* --------------------------------- Writes --------------------------------- */
+
+// Every write answers with the student's grade for `month`, the month on screen.
+
+export async function recordStudentPayment(
+  teacherId: string,
+  input: RecordPaymentBody,
+  month: IsoMonth
+): Promise<GradePayments> {
+  const outcome = await recordPayment(teacherId, input, currentMonthInCairo());
+
+  switch (outcome.status) {
+    case 'student-not-found':
+      throw StudentErrors.notFound();
+    case 'month-before-joining':
+      throw PaymentErrors.monthBeforeJoining(outcome.month);
+    case 'month-skipped':
+      throw PaymentErrors.monthSkipped(outcome.month);
+    // A repeat of a request that already succeeded (a retry after a lost
+    // response) gets the same answer, not an error: true idempotency.
+    case 'duplicate-request':
+    case 'recorded':
+      return getGradePayments(teacherId, outcome.gradeId, month);
+  }
+}
+
+export async function voidStudentPayment(
+  teacherId: string,
+  paymentId: string,
+  reason: string,
+  month: IsoMonth
+): Promise<GradePayments> {
+  const outcome = await voidPayment(teacherId, paymentId, reason);
+
+  if (outcome.status === 'not-found') throw PaymentErrors.paymentNotFound();
+  if (outcome.status === 'already-voided') throw PaymentErrors.alreadyVoided();
+
+  return getGradePayments(teacherId, outcome.gradeId, month);
+}
+
+export async function skipStudentMonth(
+  teacherId: string,
+  studentId: string,
+  skipped: IsoMonth,
+  reason: string,
+  month: IsoMonth
+): Promise<GradePayments> {
+  const outcome = await skipMonth(teacherId, studentId, skipped, reason);
+
+  switch (outcome.status) {
+    case 'student-not-found':
+      throw StudentErrors.notFound();
+    case 'month-before-joining':
+      throw PaymentErrors.monthBeforeJoining(skipped);
+    case 'month-has-payments':
+      throw PaymentErrors.monthHasPayments();
+    case 'skipped':
+      return getGradePayments(teacherId, outcome.gradeId, month);
+  }
+}
+
+export async function unskipStudentMonth(
+  teacherId: string,
+  studentId: string,
+  skipped: IsoMonth,
+  month: IsoMonth
+): Promise<GradePayments> {
+  const outcome = await unskipMonth(teacherId, studentId, skipped);
+  if (outcome.status === 'student-not-found') throw StudentErrors.notFound();
+
+  return getGradePayments(teacherId, outcome.gradeId, month);
+}
+
+export async function saveStudentMonthNote(
+  teacherId: string,
+  studentId: string,
+  noted: IsoMonth,
+  text: string,
+  month: IsoMonth
+): Promise<GradePayments> {
+  const outcome = await saveMonthNote(teacherId, studentId, noted, text || null);
+  if (outcome.status === 'student-not-found') throw StudentErrors.notFound();
+
+  return getGradePayments(teacherId, outcome.gradeId, month);
 }
 
 /* --------------------------------- Helpers -------------------------------- */
