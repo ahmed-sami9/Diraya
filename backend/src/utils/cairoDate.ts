@@ -20,3 +20,6 @@ export function isValidIsoDay(value: string): boolean {
 
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
+
+export const currentMonthInCairo = (now: Date = new Date()): string =>
+  todayInCairo(now).slice(0, 7);

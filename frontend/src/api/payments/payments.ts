@@ -115,7 +115,7 @@ export type PaymentStudent = {
 // GET /teacher/payments/grades/:gradeId?month=
 // The selected month, three before it and one after (paying ahead).
 export type GradePayments = {
-  grade: { id: string; name: string; fee: number; feeSince: IsoMonth };
+  grade: { id: string; name: string; fee: number };
   groups: { id: string; name: string }[];
   month: IsoMonth;
   months: IsoMonth[];

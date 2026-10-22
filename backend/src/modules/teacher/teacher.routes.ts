@@ -6,6 +6,7 @@ import groupsRoutes from '../groups/groups.routes';
 import studentsRoutes from '../students/students.routes';
 import attendanceRoutes from '../attendance/attendance.routes';
 import examsRoutes from '../exams/exams.routes';
+import paymentsRoutes from '../payments/payments.routes';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/groups', authenticate, groupsRoutes);
 router.use('/students', authenticate, studentsRoutes);
 router.use('/attendance', authenticate, attendanceRoutes);
 router.use('/exams', authenticate, examsRoutes);
+router.use('/payments', authenticate, paymentsRoutes);
 
 export default router;

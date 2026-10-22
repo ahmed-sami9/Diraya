@@ -95,9 +95,7 @@ function GradeView({ gradeId, month, onRecord }: GradeViewProps) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-bold tracking-tight text-ink">{data.grade.name}</h2>
-        <p className="text-sm text-ink-secondary">
-          {formatMoney(data.grade.fee)} / month · since {formatMonth(data.grade.feeSince)}
-        </p>
+        <p className="text-sm text-ink-secondary">{formatMoney(data.grade.fee)} / month</p>
       </div>
 
       <GradeTiles data={data} />
