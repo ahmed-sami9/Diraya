@@ -48,7 +48,7 @@ async function addTeacher(name: string) {
 async function addGrade(teacherId: string, name: string) {
   return (
     await one<{ id: string }>(
-      `INSERT INTO grades (teacher_id, name) VALUES ($1, $2) RETURNING id::text AS id`,
+      `INSERT INTO grades (teacher_id, name, monthly_fee) VALUES ($1, $2, 0) RETURNING id::text AS id`,
       [teacherId, name]
     )
   ).id;

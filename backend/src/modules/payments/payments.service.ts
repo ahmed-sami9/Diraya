@@ -214,7 +214,7 @@ export async function getGradePayments(
   const counted = selected.filter((cell) => ['paid', 'partly', 'unpaid'].includes(cell.status));
 
   return {
-    grade: { id: grade.id, name: grade.name, fee: grade.monthly_fee ?? 0 },
+    grade: { id: grade.id, name: grade.name, fee: grade.monthly_fee },
     groups,
     month,
     months,

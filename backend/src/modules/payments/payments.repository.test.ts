@@ -18,7 +18,7 @@ const run = Date.now();
 let teacherA = '';
 let teacherB = '';
 let gradeA = ''; // teacher A, fee 200
-let gradeNoFee = ''; // teacher A, fee not set
+let gradeNoFee = ''; // teacher A, a free grade (fee 0)
 let gradeB = ''; // teacher B
 type StudentName =
   | 'ali'
@@ -48,7 +48,7 @@ async function addTeacher(name: string) {
   ).id;
 }
 
-async function addGrade(teacherId: string, name: string, fee: number | null) {
+async function addGrade(teacherId: string, name: string, fee: number) {
   return (
     await one<{ id: string }>(
       `INSERT INTO grades (teacher_id, name, monthly_fee) VALUES ($1, $2, $3) RETURNING id::text AS id`,
@@ -130,7 +130,7 @@ before(async () => {
   teacherB = await addTeacher('b');
 
   gradeA = await addGrade(teacherA, 'Grade 3', 200);
-  gradeNoFee = await addGrade(teacherA, 'Grade 1', null);
+  gradeNoFee = await addGrade(teacherA, 'Grade 1', 0);
   gradeB = await addGrade(teacherB, 'Grade 3', 200);
 
   const groupA = await addGroup(teacherA, gradeA);
@@ -372,7 +372,7 @@ describe('recordPayment', () => {
     assert.equal(months['2026-10']!.paid, 200);
   });
 
-  it('a grade with no fee yet: nothing is due', async () => {
+  it('a free grade (fee 0): nothing is due', async () => {
     const months = await monthsOf(s.nofee, ['2026-10'], gradeNoFee);
     assert.equal(months['2026-10']!.due, 0);
     assert.equal(months['2026-10']!.status, 'not-due');

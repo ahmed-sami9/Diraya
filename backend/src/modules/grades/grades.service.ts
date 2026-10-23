@@ -28,7 +28,7 @@ const FIRST_GROUP_NAME = 'Group 1';
 export type GradeSummary = {
   id: string;
   name: string;
-  monthlyFee: number | null;
+  monthlyFee: number;
   studentCount: number;
   groupCount: number;
   nextSession: { startsAt: string; groupName: string } | null;

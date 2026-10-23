@@ -33,11 +33,13 @@ function validate(name: string, fee: string): FieldErrors {
     errors.name = `Keep the name under ${NAME_MAX_LENGTH} characters.`;
   }
 
-  if (fee !== '') {
+  if (fee === '') {
+    errors.monthlyFee = 'Enter the monthly fee. Use 0 for a free grade.';
+  } else {
     const value = Number(fee);
 
     if (!Number.isInteger(value) || value < 0) {
-      errors.monthlyFee = 'Enter a whole number of pounds, or leave it empty.';
+      errors.monthlyFee = 'Enter a whole number of pounds.';
     } else if (value > FEE_MAX) {
       errors.monthlyFee = `The fee can't be more than EGP ${FEE_MAX.toLocaleString('en-GB')}.`;
     }
@@ -54,7 +56,7 @@ function GradeFormDialog({ grade, onSubmit, onClose }: GradeFormDialogProps) {
   const isEditing = Boolean(grade);
 
   const [name, setName] = useState(grade?.name ?? '');
-  const [fee, setFee] = useState(grade?.monthlyFee != null ? String(grade.monthlyFee) : '');
+  const [fee, setFee] = useState(grade ? String(grade.monthlyFee) : '');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,7 +98,7 @@ function GradeFormDialog({ grade, onSubmit, onClose }: GradeFormDialogProps) {
     try {
       await onSubmit({
         name: trimmedName,
-        monthlyFee: fee.trim() === '' ? null : Number(fee),
+        monthlyFee: Number(fee),
       });
 
       onClose();
@@ -248,7 +250,7 @@ function GradeFormDialog({ grade, onSubmit, onClose }: GradeFormDialogProps) {
               htmlFor={feeId}
               className="text-sm font-semibold text-ink"
             >
-              Monthly fee <span className="font-normal text-ink-muted">(optional)</span>
+              Monthly fee
             </label>
 
             <div className="relative">
@@ -283,7 +285,8 @@ function GradeFormDialog({ grade, onSubmit, onClose }: GradeFormDialogProps) {
               id={`${feeId}-hint`}
               className={`text-[13px] ${fieldErrors.monthlyFee ? 'text-danger' : 'text-ink-secondary'}`}
             >
-              {fieldErrors.monthlyFee ?? 'Leave it empty to use your default fee from Settings.'}
+              {fieldErrors.monthlyFee ??
+                'What each student pays per month. Use 0 for a free grade.'}
             </p>
           </div>
 

@@ -22,8 +22,8 @@ import type { GroupSummary } from './groups';
 export type GradeSummary = {
   id: string;
   name: string;
-  // Whole Egyptian pounds. null means "use the default fee from Settings".
-  monthlyFee: number | null;
+  // Whole Egyptian pounds; 0 for a free grade.
+  monthlyFee: number;
   studentCount: number;
   groupCount: number;
   // The soonest upcoming session across all the grade's groups.
@@ -46,7 +46,7 @@ export type GradeSummary = {
 // What the "Add grade" and "Edit grade" forms send.
 export type GradeInput = {
   name: string;
-  monthlyFee: number | null;
+  monthlyFee: number;
 };
 
 export async function getGrades(signal?: AbortSignal): Promise<GradeSummary[]> {

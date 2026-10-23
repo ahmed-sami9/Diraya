@@ -110,7 +110,7 @@ before(async () => {
   st.salma = await add(gradeId, groupA, 'Salma Hany');
   st.karim = await add(gradeId, groupB, 'Karim Omran');
 
-  const [, other] = await A('POST', '/grades', { name: 'Grade 1', monthlyFee: null });
+  const [, other] = await A('POST', '/grades', { name: 'Grade 1', monthlyFee: 0 });
   otherGradeId = other.grade.id;
   const [, otherDetail] = await A('GET', `/grades/${otherGradeId}`);
   otherGradeStudent = (await add(otherGradeId, otherDetail.groups[0].id, 'Nour Grade1')).id;

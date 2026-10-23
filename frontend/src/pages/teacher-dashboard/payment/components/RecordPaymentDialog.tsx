@@ -100,7 +100,9 @@ function RecordPaymentDialog({
           : info.status === 'skipped'
             ? 'skipped'
             : needs === 0
-              ? 'paid'
+              ? info.status === 'paid' || info.status === 'partly'
+                ? 'paid'
+                : 'nothing due'
               : isFuture
                 ? `${needs} ahead`
                 : `${needs} due`;
@@ -334,7 +336,12 @@ function RecordPaymentDialog({
           className="flex flex-col gap-1.5"
         >
           <legend className={`${labelClasses} mb-1.5`}>For which months</legend>
-          {!row ? (
+          {data?.grade.fee === 0 ? (
+            <p className="text-[13px] text-ink-secondary">
+              This grade’s monthly fee is EGP 0, so nothing is due. To record payments, set its fee
+              in Students → the grade’s options → Edit.
+            </p>
+          ) : !row ? (
             <p className="text-[13px] text-ink-muted">Pick a student to see their months.</p>
           ) : (
             <div

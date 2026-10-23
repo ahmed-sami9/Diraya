@@ -15,7 +15,6 @@ const toDate = (month: IsoMonth) => `${month}-01`;
 /* ------------------------ One student in one month ------------------------ */
 
 // The one place due / paid / left / status are worked out, so every read agrees.
-// A grade with no fee yet counts as 0.
 type StudentMonthsParts = { where: string; months: string; currentMonth: string };
 
 const studentMonthsSql = ({ where, months, currentMonth }: StudentMonthsParts) => `
@@ -24,7 +23,7 @@ const studentMonthsSql = ({ where, months, currentMonth }: StudentMonthsParts) =
     s.grade_id,
     m.month,
     j.joined_month,
-    COALESCE(g.monthly_fee, 0) AS fee,
+    g.monthly_fee AS fee,
     s.discount_percent,
     x.skip_reason,
     x.note,
@@ -53,7 +52,7 @@ const studentMonthsSql = ({ where, months, currentMonth }: StudentMonthsParts) =
   CROSS JOIN LATERAL (
     SELECT CASE
       WHEN m.month < j.joined_month OR x.skip_reason IS NOT NULL THEN 0
-      ELSE round(COALESCE(g.monthly_fee, 0) * (100 - s.discount_percent) / 100.0)::int
+      ELSE round(g.monthly_fee * (100 - s.discount_percent) / 100.0)::int
     END AS due
   ) d
   CROSS JOIN LATERAL (
@@ -116,7 +115,7 @@ async function lockStudent(
 export type PaymentGradeRow = {
   id: string;
   name: string;
-  monthly_fee: number | null;
+  monthly_fee: number;
 };
 
 export async function findGrade(

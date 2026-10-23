@@ -9,7 +9,7 @@ import { GradeErrors } from './grades.errors';
 // them for a quick message; these are the ones that actually protect the data.
 export const gradeInputSchema = z.object({
   name: z.string().trim().min(1).max(60),
-  monthlyFee: z.number().int().min(0).max(100_000).nullable(),
+  monthlyFee: z.number().int().min(0).max(100_000),
 });
 
 export type GradeInput = z.infer<typeof gradeInputSchema>;

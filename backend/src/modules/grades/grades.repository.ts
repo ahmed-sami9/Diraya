@@ -6,7 +6,7 @@ import { pool } from '../../config/db';
 export type GradeRow = {
   id: string;
   name: string;
-  monthly_fee: number | null;
+  monthly_fee: number;
   student_count: number;
   group_count: number;
   // The grade's most recent class, across all its groups. All null when no
@@ -86,7 +86,7 @@ export async function findGradeById(teacherId: string, gradeId: string): Promise
 // Throws a unique violation (grades_teacher_id_name_unique) if the name is taken.
 export async function insertGradeWithFirstGroup(
   teacherId: string,
-  input: { name: string; monthlyFee: number | null },
+  input: { name: string; monthlyFee: number },
   firstGroupName: string
 ): Promise<GradeRow> {
   const client = await pool.connect();
@@ -139,7 +139,7 @@ export async function insertGradeWithFirstGroup(
 export async function updateGrade(
   teacherId: string,
   gradeId: string,
-  input: { name: string; monthlyFee: number | null }
+  input: { name: string; monthlyFee: number }
 ): Promise<boolean> {
   const result = await pool.query(
     `

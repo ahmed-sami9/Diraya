@@ -69,7 +69,7 @@ async function signedInTeacher(name: string): Promise<{ id: string; get: Call; s
   return { id, get, send };
 }
 
-async function addGrade(teacherId: string, name: string, fee: number | null) {
+async function addGrade(teacherId: string, name: string, fee: number) {
   const grade = await one<{ id: string }>(
     `INSERT INTO grades (teacher_id, name, monthly_fee) VALUES ($1, $2, $3) RETURNING id::text AS id`,
     [teacherId, name, fee]
@@ -134,7 +134,7 @@ before(async () => {
   teacherIds.push(a.id, b.id);
 
   grade = await addGrade(a.id, 'Grade 3', 200);
-  noFeeGrade = await addGrade(a.id, 'Grade 1', null);
+  noFeeGrade = await addGrade(a.id, 'Grade 1', 0);
 
   ali = await addStudent(a.id, grade, 'Ali', TWO_AGO);
   sara = await addStudent(a.id, grade, 'Sara', TWO_AGO);
@@ -341,7 +341,7 @@ describe('GET /grades/:gradeId', () => {
     });
   });
 
-  it('a grade with no fee yet: fee 0 and nothing due', async () => {
+  it('a free grade (fee 0): nothing due', async () => {
     const [status, data] = await A(`/grades/${noFeeGrade.gradeId}?month=${NOW}`);
 
     assert.equal(status, 200);
