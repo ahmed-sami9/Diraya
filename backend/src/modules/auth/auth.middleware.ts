@@ -35,6 +35,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     req.user = {
       userId: payload.userId,
       role: payload.role,
+      sessionId: payload.sid,
     };
 
     next();

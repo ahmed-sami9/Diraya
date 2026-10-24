@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 import { ApiError } from '../../../../api/apiClient';
 import type { Account, PasswordChangeInput } from '../../../../api/settings/account';
@@ -107,6 +107,15 @@ function PasswordForm({
   const currentRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
+  // A disabled input can't take focus, so a field to focus after the server
+  // answers waits here until the form is unlocked.
+  const focusAfterSave = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (isSaving || !focusAfterSave.current) return;
+    focusAfterSave.current.focus();
+    focusAfterSave.current = null;
+  }, [isSaving]);
 
   const update = (key: keyof Fields) => (value: string) => {
     setFields((previous) => ({ ...previous, [key]: value }));
@@ -143,7 +152,7 @@ function PasswordForm({
 
       if (error instanceof ApiError && error.code === 'INVALID_CURRENT_PASSWORD') {
         setFieldErrors({ current: 'That’s not your current password.' });
-        currentRef.current?.focus();
+        focusAfterSave.current = currentRef.current;
       } else {
         setFormError(
           error instanceof Error ? error.message : 'Something went wrong. Please try again.'

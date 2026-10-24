@@ -30,6 +30,9 @@ type FieldErrors = {
   phone?: string;
 };
 
+// The server's rule too: trimmed, inner runs of spaces made one.
+const tidyName = (text: string) => text.trim().replace(/\s+/g, ' ');
+
 // "" -> null (no phone), anything else -> the 11-digit stored form.
 const toStoredPhone = (text: string) => (text.trim() === '' ? null : normalizePhone(text));
 
@@ -70,7 +73,7 @@ function ProfileCard({ account, onSave }: ProfileCardProps) {
   const emailId = useId();
 
   // Compared with what the server has, so "Save" means there's something to save.
-  const isDirty = name.trim() !== account.name || toStoredPhone(phone) !== account.phone;
+  const isDirty = tidyName(name) !== account.name || toStoredPhone(phone) !== account.phone;
 
   useEffect(() => {
     if (!justSaved) return;
@@ -96,7 +99,7 @@ function ProfileCard({ account, onSave }: ProfileCardProps) {
     event.preventDefault();
     if (isSaving || !isDirty) return;
 
-    const trimmedName = name.trim();
+    const trimmedName = tidyName(name);
     const storedPhone = toStoredPhone(phone);
     const errors = validate(trimmedName, storedPhone);
 
