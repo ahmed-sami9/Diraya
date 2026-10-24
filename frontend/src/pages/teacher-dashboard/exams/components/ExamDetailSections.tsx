@@ -325,7 +325,7 @@ export function EnterMarksLink({ to }: { to: string }) {
       to={to}
       className="
         mt-2 flex h-11 shrink-0 items-center gap-2
-        rounded-[10px] bg-primary px-4
+        rounded-[10px] bg-primary-solid px-4
         text-sm font-semibold text-white
         transition-colors hover:bg-primary-hover
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary

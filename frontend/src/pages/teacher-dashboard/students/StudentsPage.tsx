@@ -22,7 +22,7 @@ type DialogState =
 
 const primaryButtonClasses = `
   flex h-11 shrink-0 items-center gap-2
-  rounded-[10px] bg-primary px-[18px]
+  rounded-[10px] bg-primary-solid px-[18px]
   text-sm font-semibold text-white
   cursor-pointer
   transition-colors

@@ -30,7 +30,7 @@ const buttonBase = `
 
 export const primaryButtonClasses = `
   ${buttonBase}
-  bg-primary text-white
+  bg-primary-solid text-white
   hover:bg-primary-hover
   focus-visible:outline-primary
   disabled:opacity-70

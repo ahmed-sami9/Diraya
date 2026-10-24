@@ -144,7 +144,7 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
             aria-label={primaryAction.label}
             className={`
               flex h-11 w-11 items-center justify-center gap-2
-              rounded-[10px] bg-primary
+              rounded-[10px] bg-primary-solid
               text-sm font-semibold text-white
               transition-colors
               hover:bg-primary-hover

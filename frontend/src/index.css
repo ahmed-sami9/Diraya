@@ -18,6 +18,9 @@
   --color-ink-muted: #6a7085;
   --color-primary: #3431e4;
   --color-primary-hover: #2926c2;
+  /* Filled backgrounds under white text (buttons). Same as primary in light;
+     in dark, primary turns lighter to stay readable as text and lines. */
+  --color-primary-solid: #3431e4;
   --color-primary-tint: #eeeffe;
   --color-sidebar: #1f1d7a;
 
@@ -38,8 +41,9 @@
   --color-ink: #ecedf7;
   --color-ink-secondary: #b4b8d0;
   --color-ink-muted: #8c91ad;
-  --color-primary: #5552ee;
+  --color-primary: #a5a3ff;
   --color-primary-hover: #6a67f2;
+  --color-primary-solid: #5552ee;
   --color-primary-tint: #26285a;
   --color-sidebar: #0f1022;
 

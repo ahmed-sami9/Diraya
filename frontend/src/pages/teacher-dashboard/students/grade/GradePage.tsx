@@ -415,7 +415,7 @@ function EmptyMessage({ title, text, actionLabel, onAction }: EmptyMessageProps)
         <button
           type="button"
           onClick={onAction}
-          className="mt-5 flex h-11 items-center gap-2 rounded-[10px] bg-primary px-[18px] text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer"
+          className="mt-5 flex h-11 items-center gap-2 rounded-[10px] bg-primary-solid px-[18px] text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer"
         >
           <PlusIcon className="h-[18px] w-[18px]" />
           {actionLabel}

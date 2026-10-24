@@ -51,7 +51,7 @@ function GradesEmptyState({ onAddGrade }: GradesEmptyStateProps) {
           className="
             absolute left-[146px] top-[104px]
             flex h-[38px] w-[38px] items-center justify-center
-            rounded-full border-[3px] border-surface bg-primary text-white
+            rounded-full border-[3px] border-surface bg-primary-solid text-white
           "
         >
           <PlusIcon className="h-[18px] w-[18px]" />
@@ -101,7 +101,7 @@ function GradesEmptyState({ onAddGrade }: GradesEmptyStateProps) {
         onClick={onAddGrade}
         className="
           mt-7 flex h-11 items-center gap-2
-          rounded-[10px] bg-primary px-5
+          rounded-[10px] bg-primary-solid px-5
           text-sm font-semibold text-white
           cursor-pointer
           transition-colors

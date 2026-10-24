@@ -312,7 +312,7 @@ function GradeFormDialog({ grade, onSubmit, onClose }: GradeFormDialogProps) {
               disabled={isSaving}
               aria-busy={isSaving}
               className="
-                h-11 rounded-[10px] bg-primary px-[18px]
+                h-11 rounded-[10px] bg-primary-solid px-[18px]
                 text-sm font-semibold text-white
                 cursor-pointer
                 transition-colors

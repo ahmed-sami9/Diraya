@@ -120,7 +120,7 @@ function TeacherSidebar({
           }}
           className={`
             absolute inset-x-0 top-0 h-11
-            rounded-[10px] bg-primary
+            rounded-[10px] bg-primary-solid
             shadow-lg shadow-black/20
             transition-[transform,opacity] duration-300 ease-out
             motion-reduce:transition-none

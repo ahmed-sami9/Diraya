@@ -77,7 +77,7 @@ function ConnectionError({ onRetry }: ConnectionErrorProps) {
             aria-busy={isRetrying}
             className="
               mt-8 flex h-12 min-w-[180px] items-center justify-center gap-2.5
-              rounded-xl bg-primary px-7
+              rounded-xl bg-primary-solid px-7
               text-[15px] font-semibold text-white
               shadow-sm
               cursor-pointer

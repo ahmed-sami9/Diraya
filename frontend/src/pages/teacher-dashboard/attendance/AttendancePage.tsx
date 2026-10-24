@@ -112,7 +112,7 @@ function AttendancePage() {
           </p>
           <Link
             to="/teacher/students"
-            className="mt-3 flex h-11 items-center rounded-[10px] bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="mt-3 flex h-11 items-center rounded-[10px] bg-primary-solid px-4 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Go to Students
           </Link>

@@ -86,7 +86,7 @@ function GradeHeader({
             onClick={onAddStudent}
             className="
               flex h-11 flex-1 items-center justify-center gap-2
-              rounded-[10px] bg-primary px-[18px]
+              rounded-[10px] bg-primary-solid px-[18px]
               text-sm font-semibold text-white
               cursor-pointer
               transition-colors
