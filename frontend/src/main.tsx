@@ -5,15 +5,18 @@ import './index.css';
 import { AuthProvider } from './context/AuthContext.tsx';
 import App from './App.tsx';
 import GoogleProvider from './context/GoogleProvider';
+import { ThemeProvider } from './context/ThemeContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <GoogleProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
-    </GoogleProvider>
+    <ThemeProvider>
+      <GoogleProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </BrowserRouter>
+      </GoogleProvider>
+    </ThemeProvider>
   </StrictMode>
 );

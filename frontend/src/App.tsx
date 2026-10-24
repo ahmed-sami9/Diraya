@@ -43,6 +43,10 @@ const GradePaymentsPage = lazy(
   () => import('./pages/teacher-dashboard/payment/GradePaymentsPage')
 );
 
+// Settings: a frame (header) with one child route per section.
+const SettingsLayout = lazy(() => import('./pages/teacher-dashboard/settings/SettingsLayout'));
+const SettingsPage = lazy(() => import('./pages/teacher-dashboard/settings/SettingsPage'));
+
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -169,6 +173,16 @@ function App() {
             path="payments/grades/:gradeId"
             element={<GradePaymentsPage />}
           />
+
+          <Route
+            path="settings"
+            element={<SettingsLayout />}
+          >
+            <Route
+              index
+              element={<SettingsPage />}
+            />
+          </Route>
         </Route>
       </Route>
 

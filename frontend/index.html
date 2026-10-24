@@ -12,6 +12,20 @@
       content="width=device-width, initial-scale=1.0"
     />
     <title>frontend</title>
+    <!-- Sets the theme before the first paint, so dark mode never flashes white.
+         Keep the key and default in sync with src/utils/theme.ts. -->
+    <script>
+      (function () {
+        try {
+          var preference = localStorage.getItem('diraya-theme');
+          var dark =
+            preference === 'dark' ||
+            (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (error) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
