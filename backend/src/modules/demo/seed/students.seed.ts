@@ -47,6 +47,8 @@ export type DemoStudent = {
   groupIndex: number;
   gradeIndex: number;
   persona: Persona;
+  // The payments seeder works out each month's due from this.
+  discount: { percent: number; reason: string } | null;
   // Kept as "days ago", not a date: turned into a day when the demo is created,
   // so a server that runs for weeks still seeds data relative to today.
   joinedDaysAgo: number;
@@ -61,6 +63,7 @@ export const DEMO_STUDENTS: DemoStudent[] = NAMES_BY_GROUP.flatMap((names, group
     groupIndex,
     gradeIndex: DEMO_GROUPS[groupIndex]!.gradeIndex,
     persona: pick(PERSONAS, position + groupIndex),
+    discount: DISCOUNTS[name] ?? null,
     joinedDaysAgo: LATE_JOINERS[name] ?? REGISTERED_DAYS_AGO,
   }))
 );
@@ -98,7 +101,7 @@ export const studentsSeeder: DemoSeeder = {
       parentPhone: mobile(index + 1),
       // Older students (grades 2 and 3) often have their own phone.
       phone: student.gradeIndex > 0 && index % 2 === 0 ? mobile(index + 101) : null,
-      discount: DISCOUNTS[student.name],
+      discount: student.discount,
       code: codeOf.get(index)!,
     }));
 

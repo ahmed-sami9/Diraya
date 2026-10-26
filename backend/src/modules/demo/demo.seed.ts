@@ -6,6 +6,7 @@ import { groupsSeeder } from './seed/groups.seed';
 import { studentsSeeder } from './seed/students.seed';
 import { attendanceSeeder } from './seed/attendance.seed';
 import { examsSeeder } from './seed/exams.seed';
+import { paymentsSeeder } from './seed/payments.seed';
 import { notesSeeder } from './seed/notes.seed';
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,7 @@ const DEMO_SEEDERS: DemoSeeder[] = [
   studentsSeeder,
   attendanceSeeder,
   examsSeeder,
-  // paymentsSeeder,
+  paymentsSeeder,
   notesSeeder,
 ];
 
