@@ -3,6 +3,9 @@ import type { PoolClient } from 'pg';
 import type { DemoSeedContext, DemoSeeder } from './seed/demo.seed.types';
 import { gradesSeeder } from './seed/grades.seed';
 import { groupsSeeder } from './seed/groups.seed';
+import { studentsSeeder } from './seed/students.seed';
+import { attendanceSeeder } from './seed/attendance.seed';
+import { notesSeeder } from './seed/notes.seed';
 
 // ---------------------------------------------------------------------------
 // The demo template
@@ -14,37 +17,19 @@ import { groupsSeeder } from './seed/groups.seed';
 //
 // HOW TO ADD A SEEDER
 //
-// 1. Create a file in ./seed, one per feature, for example
-//    ./seed/students.seed.ts:
-//
-//      import type { DemoSeeder } from './demo.seed.types';
-//
-//      export const studentsSeeder: DemoSeeder = {
-//        name: 'students',
-//
-//        async run({ client, teacherId, created }) {
-//          const result = await client.query(
-//            `
-//              INSERT INTO students (teacher_id, full_name)
-//              VALUES ($1, 'Omar Hassan'), ($1, 'Layla Mahmoud')
-//              RETURNING id
-//            `,
-//            [teacherId]
-//          );
-//
-//          // Write the new IDs down for the seeders that run after this one.
-//          created.students = result.rows.map((row) => String(row.id));
-//        },
-//      };
+// 1. Create a file in ./seed, one per feature. ./seed/groups.seed.ts is a
+//    short example: it reads ids an earlier seeder wrote to `created`,
+//    inserts its rows in ONE query through `client`, and writes its own ids
+//    to `created` for the seeders after it.
 //
 // 2. Import it below and add it to DEMO_SEEDERS.
 //
 // ORDER MATTERS. Seeders run from top to bottom, so a seeder must come after
-// the ones it depends on: students and courses first, then enrolments, then
-// quizzes, then quiz results. Charts and statistics need no seeder of their
-// own, because they are calculated from that data. Use daysAgo() from
-// ./seed/demo.seed.helpers to spread dates over the past weeks, so the charts
-// have something to show.
+// the ones it depends on: grades, then groups, then students, then what
+// belongs to students (attendance, exams, payments, notes). Charts and
+// statistics need no seeder of their own: they are calculated from that data.
+// Use the helpers in ./seed/demo.seed.helpers (daysAgo, cairoDaysAgo) so every
+// date is relative to today and the demo never looks out of date.
 //
 // The new table's teacher_id column must have ON DELETE CASCADE, so deleting
 // an old demo teacher removes its rows too.
@@ -53,11 +38,11 @@ import { groupsSeeder } from './seed/groups.seed';
 const DEMO_SEEDERS: DemoSeeder[] = [
   gradesSeeder,
   groupsSeeder,
-  // studentsSeeder,
-  // attendanceSeeder,
+  studentsSeeder,
+  attendanceSeeder,
   // examsSeeder,
   // paymentsSeeder,
-  // notesSeeder,
+  notesSeeder,
 ];
 
 // Fills one demo teacher's account with the template data.
