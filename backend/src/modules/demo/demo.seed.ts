@@ -1,15 +1,16 @@
 import type { PoolClient } from 'pg';
 
 import type { DemoSeedContext, DemoSeeder } from './seed/demo.seed.types';
+import { gradesSeeder } from './seed/grades.seed';
+import { groupsSeeder } from './seed/groups.seed';
 
 // ---------------------------------------------------------------------------
 // The demo template
 // ---------------------------------------------------------------------------
 //
-// This is the sample data every new demo teacher starts with. It is empty
-// today because the features it will describe (students, courses, quizzes...)
-// do not exist yet. Each time you build a feature, add a seeder for it here,
-// so the demo grows with the project.
+// This is the sample data every new demo teacher starts with, so "Try the
+// demo" opens a dashboard with something on every page. Each time you build
+// a feature, add a seeder for it here, so the demo grows with the project.
 //
 // HOW TO ADD A SEEDER
 //
@@ -50,12 +51,13 @@ import type { DemoSeedContext, DemoSeeder } from './seed/demo.seed.types';
 // ---------------------------------------------------------------------------
 
 const DEMO_SEEDERS: DemoSeeder[] = [
+  gradesSeeder,
+  groupsSeeder,
   // studentsSeeder,
-  // coursesSeeder,
-  // enrolmentsSeeder,
-  // quizzesSeeder,
-  // quizResultsSeeder,
+  // attendanceSeeder,
+  // examsSeeder,
   // paymentsSeeder,
+  // notesSeeder,
 ];
 
 // Fills one demo teacher's account with the template data.
