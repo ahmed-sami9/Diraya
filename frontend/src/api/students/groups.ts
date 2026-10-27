@@ -1,4 +1,5 @@
 import { apiRequest } from '../apiClient';
+import type { GradeSummary } from './grades';
 
 // The groups inside a grade ("Group A", "Saturday group").
 //
@@ -6,6 +7,7 @@ import { apiRequest } from '../apiClient';
 //
 //   POST   /teacher/grades/:gradeId/groups                  -> 201 { group: GroupSummary }
 //   PATCH  /teacher/groups/:groupId                         -> 200 { group: GroupSummary }
+//   PUT    /teacher/groups/:groupId/schedule                -> 200 { group, grade }
 //   DELETE /teacher/groups/:groupId?moveStudentsTo=:groupId -> 204
 //
 // A group is the class: every student is in one, and every grade keeps at
@@ -14,7 +16,7 @@ import { apiRequest } from '../apiClient';
 //
 // Error codes the server sends back (read them from ApiError.code):
 //
-//   INVALID_INPUT        400  the name failed validation
+//   INVALID_INPUT        400  the name or the schedule failed validation
 //   GRADE_NOT_FOUND      404  no grade with this id for this teacher
 //   GROUP_NOT_FOUND      404  no group with this id for this teacher
 //   GROUP_NAME_TAKEN     409  the grade already has a group with this name
@@ -60,6 +62,20 @@ export async function renameGroup(groupId: string, input: GroupInput): Promise<G
   );
 
   return data.group;
+}
+
+// Replaces the group's whole weekly schedule (an empty list clears it).
+// Answers with the group AND its grade: the grade's "next class" is worked out
+// from all its groups' schedules, so it changes too.
+export async function saveGroupSchedule(
+  groupId: string,
+  sessions: GroupSession[]
+): Promise<{ group: GroupSummary; grade: GradeSummary }> {
+  return apiRequest<{ group: GroupSummary; grade: GradeSummary }>(
+    'PUT',
+    `/teacher/groups/${encodeURIComponent(groupId)}/schedule`,
+    { body: { sessions } }
+  );
 }
 
 // moveStudentsTo: the group that receives this group's students. Needed only

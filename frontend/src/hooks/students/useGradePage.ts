@@ -12,7 +12,9 @@ import {
   createGroup,
   deleteGroup,
   renameGroup,
+  saveGroupSchedule,
   type GroupInput,
+  type GroupSession,
   type GroupSummary,
 } from '../../api/students/groups';
 import {
@@ -106,6 +108,15 @@ export function useGradePage(gradeId: string) {
     setGroups((previous) => previous.map((item) => (item.id === groupId ? group : item)));
   }, []);
 
+  // The server answers with the group and the grade: the header's "next
+  // class" depends on every group's schedule, so both are replaced.
+  const saveSchedule = useCallback(async (groupId: string, sessions: GroupSession[]) => {
+    const saved = await saveGroupSchedule(groupId, sessions);
+
+    setGroups((previous) => previous.map((item) => (item.id === groupId ? saved.group : item)));
+    setGrade(saved.grade);
+  }, []);
+
   // moveStudentsTo: where this group's students go (null when it has none).
   const removeGroup = useCallback(async (groupId: string, moveStudentsTo: string | null) => {
     await deleteGroup(groupId, moveStudentsTo);
@@ -145,6 +156,7 @@ export function useGradePage(gradeId: string) {
     removeGrade,
     addGroup,
     editGroup,
+    saveSchedule,
     removeGroup,
     addStudent,
   };
