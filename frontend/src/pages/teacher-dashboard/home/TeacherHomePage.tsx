@@ -1,6 +1,7 @@
 import Card from '../../../components/Card';
 import { useHomeSummary, type HomeSummaryState } from '../../../hooks/home/useHomeSummary';
 import EmptyState from '../../../components/EmptyState';
+import { formatTime } from '../../../utils/formatSchedule';
 
 import StudentsIcon from '../../../components/icons/StudentsIcon';
 import CalendarIcon from '../../../components/icons/CalendarIcon';
@@ -12,6 +13,8 @@ import ActivityIcon from '../../../components/icons/ActivityIcon';
 import SummaryTile from './components/SummaryTile';
 import GettingStartedCard from './components/GettingStartedCard';
 import QuickActions from './components/QuickActions';
+import TodayScheduleCard from './components/TodayScheduleCard';
+import { attendanceLink, todayProgress } from './todayClasses';
 
 const formatCount = (value: number) => value.toLocaleString('en-GB');
 
@@ -33,13 +36,35 @@ function studentsTile(state: HomeSummaryState): { value: string; hint: string } 
   };
 }
 
+// The Attendance tile: how many of today's classes are taken, and a link
+// straight to the next one still waiting.
+function attendanceTile(state: HomeSummaryState): { value: string; hint: string; to: string } {
+  const fallback = '/teacher/attendance';
+
+  if (state.status === 'loading') return { value: '–', hint: 'Loading…', to: fallback };
+  if (state.status === 'error') return { value: '–', hint: 'Couldn’t load right now', to: fallback };
+
+  const { date, classes } = state.summary.classesToday;
+  const { total, taken, next } = todayProgress(classes);
+
+  if (total === 0) return { value: '0', hint: 'No classes today', to: fallback };
+  if (!next) return { value: `${taken}/${total}`, hint: 'All taken ✓', to: fallback };
+
+  return {
+    value: `${taken}/${total}`,
+    hint: `Next: ${formatTime(next.startTime)} · ${next.groupName}`,
+    to: attendanceLink(next.groupId, date),
+  };
+}
+
 /**
- * Teacher Home. The Students tile reads GET /teacher/home; the other tiles and
- * cards still show their empty state until their part is built.
+ * Teacher Home. The Students and Attendance tiles and Today's schedule read
+ * GET /teacher/home; the rest still show their empty state until built.
  */
 function TeacherHomePage() {
-  const { state } = useHomeSummary();
+  const { state, reload } = useHomeSummary();
   const students = studentsTile(state);
+  const attendance = attendanceTile(state);
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,10 +83,10 @@ function TeacherHomePage() {
           icon={<StudentsIcon className="h-[18px] w-[18px]" />}
         />
         <SummaryTile
-          to="/teacher/students"
+          to={attendance.to}
           label="Attendance today"
-          value="–"
-          hint="No classes today"
+          value={attendance.value}
+          hint={attendance.hint}
           icon={<CalendarIcon className="h-[18px] w-[18px]" />}
         />
         <SummaryTile
@@ -85,13 +110,7 @@ function TeacherHomePage() {
         <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
           <GettingStartedCard />
 
-          <Card title="Today's schedule">
-            <EmptyState
-              icon={<CalendarIcon className="h-6 w-6" />}
-              title="No classes today"
-              description="Classes you schedule will appear here on the day they run."
-            />
-          </Card>
+          <TodayScheduleCard state={state} onRetry={reload} />
 
           <Card title="Needs your attention">
             <EmptyState
