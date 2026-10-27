@@ -1,6 +1,11 @@
 import { todayInCairo } from '../../../utils/cairoDate';
 
-import type { IsoMonth, MonthStatus, PaymentMethod } from '../../../api/payments/payments';
+import type {
+  IsoMonth,
+  MonthStatus,
+  PaymentMethod,
+  PaymentsOverview,
+} from '../../../api/payments/payments';
 
 export type { IsoMonth, MonthStatus };
 
@@ -39,6 +44,14 @@ export const formatMonth = (month: IsoMonth) =>
   monthFormat.format(new Date(`${month}-01T12:00:00Z`));
 export const monthName = (month: IsoMonth) =>
   monthNameFormat.format(new Date(`${month}-01T12:00:00Z`));
+
+/* ------------------------------ Earlier months ------------------------------ */
+
+// "See who" for money owed from months before this one: the first grade
+// with debt, filtered to who owes. Shared by the Payments banner and the
+// Home tile, so both open the same place.
+export const earlierOwedLink = (earlier: NonNullable<PaymentsOverview['earlierOwed']>) =>
+  earlier.gradeId ? `/teacher/payments/grades/${earlier.gradeId}?owes=1` : '/teacher/payments';
 
 /* ---------------------------------- Money --------------------------------- */
 

@@ -1,10 +1,13 @@
 import Card from '../../../components/Card';
 import { useHomeSummary, type HomeSummaryState } from '../../../hooks/home/useHomeSummary';
 import { useExams } from '../../../hooks/exams/useExams';
+import { usePaymentsOverview } from '../../../hooks/payments/usePayments';
 import EmptyState from '../../../components/EmptyState';
 import { formatTime } from '../../../utils/formatSchedule';
+import { pluralize } from '../../../utils/formatSession';
 import { todayInCairo } from '../../../utils/cairoDate';
 import { examPath, examsMissingMarks, papersToMark } from '../exams/examHelpers';
+import { currentMonth, earlierOwedLink, formatMoney } from '../payment/paymentsHelpers';
 
 import StudentsIcon from '../../../components/icons/StudentsIcon';
 import CalendarIcon from '../../../components/icons/CalendarIcon';
@@ -86,10 +89,34 @@ function marksTile(state: ReturnType<typeof useExams>['state']): {
   return { value, hint: `${newest.title} + ${missing.length - 1} more`, to: fallback };
 }
 
+// The Payments overdue tile: money still owed from months BEFORE this one,
+// worked out by the server (the Payments page's "Owed from earlier months").
+// This month isn't overdue yet: it's still running.
+function overdueTile(state: ReturnType<typeof usePaymentsOverview>['state']): {
+  value: string;
+  hint: string;
+  to: string;
+} {
+  const fallback = '/teacher/payments';
+
+  if (state.status === 'loading') return { value: '–', hint: 'Loading…', to: fallback };
+  if (state.status === 'error') return { value: '–', hint: 'Couldn’t load right now', to: fallback };
+
+  const earlier = state.overview.earlierOwed;
+
+  if (!earlier) return { value: formatMoney(0), hint: 'No overdue payments', to: fallback };
+
+  return {
+    value: formatMoney(earlier.amount),
+    hint: `${pluralize(earlier.students, 'student')} from earlier months`,
+    to: earlierOwedLink(earlier),
+  };
+}
+
 /**
  * Teacher Home. Students, Attendance and Today's schedule read GET
- * /teacher/home; Papers to mark reads the exams list (GET /teacher/exams).
- * The rest still show their empty state until built.
+ * /teacher/home; Papers to mark reads the exams list and Payments overdue
+ * the payments overview, the same requests their own pages make.
  */
 function TeacherHomePage() {
   const { state, reload } = useHomeSummary();
@@ -98,6 +125,9 @@ function TeacherHomePage() {
   // The exams list, the same one the Exams page reads (see marksTile).
   const exams = useExams();
   const marks = marksTile(exams.state);
+  // This month's overview, the same one the Payments page opens on.
+  const payments = usePaymentsOverview(currentMonth());
+  const overdue = overdueTile(payments.state);
 
   return (
     <div className="flex flex-col gap-6">
@@ -130,10 +160,10 @@ function TeacherHomePage() {
           icon={<ExamsIcon className="h-[18px] w-[18px]" />}
         />
         <SummaryTile
-          to="/teacher/payments"
+          to={overdue.to}
           label="Payments overdue"
-          value="EGP 0"
-          hint="No overdue payments"
+          value={overdue.value}
+          hint={overdue.hint}
           icon={<PaymentsIcon className="h-[18px] w-[18px]" />}
         />
       </section>

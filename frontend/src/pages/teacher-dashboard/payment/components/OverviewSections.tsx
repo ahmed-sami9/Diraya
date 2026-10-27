@@ -4,6 +4,7 @@ import type { PaymentMethod, PaymentsOverview } from '../../../../api/payments/p
 import {
   TONE_FILL,
   collectedPercent,
+  earlierOwedLink,
   formatMoney,
   monthName,
   toneOf,
@@ -233,9 +234,7 @@ export function EarlierOwedBanner({
 }) {
   return (
     <Link
-      to={
-        earlier.gradeId ? `/teacher/payments/grades/${earlier.gradeId}?owes=1` : '/teacher/payments'
-      }
+      to={earlierOwedLink(earlier)}
       className="
         flex flex-wrap items-center gap-x-3 gap-y-1
         rounded-2xl border border-danger/15 bg-danger-tint/60 px-4 py-3.5 text-danger
