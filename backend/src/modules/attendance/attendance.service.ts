@@ -8,6 +8,7 @@ import {
   findGradeGroupOptions,
   findGroupWithGrade,
   findMostRecentGroupId,
+  findScheduledClassesOn,
   findSession,
   findSheetStudents,
   saveSheet,
@@ -162,4 +163,26 @@ export async function saveAttendanceSheet(
   if (result.status === 'student-not-found') throw AttendanceErrors.studentNotFound();
 
   return getAttendanceSheet(teacherId, { groupId: group.group_id, date: input.date });
+}
+
+/* ------------------------------ Today's classes ---------------------------- */
+
+export type ScheduledClass = {
+  groupId: string;
+  groupName: string;
+  gradeId: string;
+  gradeName: string;
+  startTime: string;
+  // Attendance has been taken for this class today.
+  taken: boolean;
+};
+
+// The timetable's classes for today in Egypt, earliest first.
+export async function getClassesToday(
+  teacherId: string
+): Promise<{ date: string; classes: ScheduledClass[] }> {
+  const date = todayInCairo();
+  const classes = await findScheduledClassesOn(teacherId, date);
+
+  return { date, classes };
 }

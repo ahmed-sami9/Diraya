@@ -1,9 +1,9 @@
 import type { DemoSeeder } from './demo.seed.types';
 
 // Two groups per grade, named the way teachers name them: by when they meet.
-// `days` (0 = Sunday ... 6 = Saturday) and `startTime` are exported for the
-// attendance seeder, which holds each group's sessions on these days. No two
-// groups share a day and time, so the timetable is one a real teacher could keep.
+// `days` (0 = Sunday ... 6 = Saturday) and `startTime` become each group's
+// timetable, and the attendance seeder holds its past classes on these days.
+// No two groups share a day and time, so it's a timetable one teacher could keep.
 export const DEMO_GROUPS = [
   { gradeIndex: 0, name: 'Sat & Tue · 4 PM', days: [6, 2], startTime: '16:00' },
   { gradeIndex: 0, name: 'Sun & Wed · 6 PM', days: [0, 3], startTime: '18:00' },
@@ -41,6 +41,26 @@ export const groupsSeeder: DemoSeeder = {
     const idByKey = new Map(result.rows.map((row) => [`${row.grade_id}|${row.name}`, row.id]));
     created.groups = DEMO_GROUPS.map((group, index) =>
       idByKey.get(`${groupGradeIds[index]}|${group.name}`)!
+    );
+
+    // Each group's weekly timetable, stored for real: the grade cards' "next
+    // class", the profiles' group days and Home's "today" all read it.
+    const slots = DEMO_GROUPS.flatMap((group, index) =>
+      group.days.map((day) => ({ groupId: created.groups![index]!, day, time: group.startTime }))
+    );
+
+    await client.query(
+      `
+        INSERT INTO group_schedules (teacher_id, group_id, weekday, start_time)
+        SELECT $1, s.group_id, s.weekday, s.start_time
+        FROM unnest($2::bigint[], $3::smallint[], $4::time[]) AS s(group_id, weekday, start_time)
+      `,
+      [
+        teacherId,
+        slots.map((slot) => slot.groupId),
+        slots.map((slot) => slot.day),
+        slots.map((slot) => slot.time),
+      ]
     );
   },
 };

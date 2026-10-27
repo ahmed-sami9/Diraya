@@ -1,5 +1,6 @@
 import { isForeignKeyViolation, isUniqueViolation } from '../../errors/pgErrors';
 
+import { findNextSessions } from '../groups/groups.repository';
 import { listGroups, type GroupSummary } from '../groups/groups.service';
 
 import { GradeErrors } from './grades.errors';
@@ -40,19 +41,20 @@ export type GradeSummary = {
   } | null;
 };
 
+type NextSession = GradeSummary['nextSession'];
+
 // Database row (snake_case) -> API shape (camelCase).
 //
-// lastSession comes from attendance (the grade's newest session).
-// nextSession needs group schedules, which don't exist yet: always null
-// until they do; the frontend already shows "No sessions yet" for null.
-function toGradeSummary(row: GradeRow): GradeSummary {
+// lastSession comes from attendance (the grade's newest class), nextSession
+// from the groups' timetables (null when no group has one).
+function toGradeSummary(row: GradeRow, nextSession: NextSession): GradeSummary {
   return {
     id: row.id,
     name: row.name,
     monthlyFee: row.monthly_fee,
     studentCount: row.student_count,
     groupCount: row.group_count,
-    nextSession: null,
+    nextSession,
     lastSession: row.last_held_at
       ? {
           heldAt: row.last_held_at.toISOString(),
@@ -64,17 +66,46 @@ function toGradeSummary(row: GradeRow): GradeSummary {
   };
 }
 
+// Every grade's next class in ONE query, however many grades there are.
+async function withNextSessions(teacherId: string, rows: GradeRow[]): Promise<GradeSummary[]> {
+  const next = await findNextSessions(
+    teacherId,
+    rows.map((row) => row.id),
+    new Date()
+  );
+  const byGrade = new Map(
+    next.map((item) => [
+      item.gradeId,
+      { startsAt: item.startsAt.toISOString(), groupName: item.groupName },
+    ])
+  );
+
+  return rows.map((row) => toGradeSummary(row, byGrade.get(row.id) ?? null));
+}
+
 export async function listGrades(teacherId: string): Promise<GradeSummary[]> {
   const rows = await findGradesByTeacher(teacherId);
 
-  return rows.map(toGradeSummary);
+  return withNextSessions(teacherId, rows);
+}
+
+// One grade's card, fresh. Used after something that changes it elsewhere
+// (a group's timetable changes its "next class").
+export async function getGradeSummary(teacherId: string, gradeId: string): Promise<GradeSummary> {
+  const row = await findGradeById(teacherId, gradeId);
+
+  if (!row) throw GradeErrors.notFound();
+
+  const [grade] = await withNextSessions(teacherId, [row]);
+  return grade!;
 }
 
 export async function createGrade(teacherId: string, input: GradeInput): Promise<GradeSummary> {
   try {
     const row = await insertGradeWithFirstGroup(teacherId, input, FIRST_GROUP_NAME);
 
-    return toGradeSummary(row);
+    // A new grade's only group has no timetable yet.
+    return toGradeSummary(row, null);
   } catch (error) {
     // The database is the one place that can answer "is this name taken?"
     // without a race: two "Create" clicks at the same moment can both pass a
@@ -116,7 +147,8 @@ export async function editGrade(
     throw GradeErrors.notFound();
   }
 
-  return toGradeSummary(row);
+  const [grade] = await withNextSessions(teacherId, [row]);
+  return grade!;
 }
 
 export async function removeGrade(teacherId: string, gradeId: string): Promise<void> {
@@ -165,5 +197,6 @@ export async function getGradeDetails(
 
   if (!row) throw GradeErrors.notFound();
 
-  return { grade: toGradeSummary(row), groups };
+  const [grade] = await withNextSessions(teacherId, [row]);
+  return { grade: grade!, groups };
 }

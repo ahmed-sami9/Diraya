@@ -1,10 +1,11 @@
 import { Router } from 'express';
 
-import { deleteGroup, patchGroup, postGroup } from './groups.controller';
+import { deleteGroup, patchGroup, postGroup, putSchedule } from './groups.controller';
 import {
   validateDeleteGroupQuery,
   validateGroupId,
   validateGroupInput,
+  validateScheduleInput,
 } from './groups.validation';
 
 // Groups have two kinds of address, so two routers:
@@ -14,6 +15,7 @@ import {
 //
 //   On their own (a group id is enough to find it):
 //     PATCH  /teacher/groups/:groupId             -> default router
+//     PUT    /teacher/groups/:groupId/schedule    (the whole weekly timetable)
 //     DELETE /teacher/groups/:groupId?moveStudentsTo=12
 //
 // The same split REST APIs often use: create under the parent, change and
@@ -28,6 +30,9 @@ gradeGroupsRouter.post('/', validateGroupInput, postGroup);
 const router = Router();
 
 router.patch('/:groupId', validateGroupId, validateGroupInput, patchGroup);
+
+// PUT: it replaces the whole timetable, the same request twice gives the same result.
+router.put('/:groupId/schedule', validateGroupId, validateScheduleInput, putSchedule);
 
 router.delete('/:groupId', validateGroupId, validateDeleteGroupQuery, deleteGroup);
 

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 
+import { saveGroupSchedule } from './groups.schedule.service';
 import { createGroup, removeGroup, renameGroup } from './groups.service';
 import type { DeleteGroupQuery } from './groups.validation';
 
@@ -31,6 +32,21 @@ export async function patchGroup(
     const group = await renameGroup(req.user!.userId, req.params.groupId, req.body);
 
     res.status(200).json({ group });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// PUT /teacher/groups/:groupId/schedule
+export async function putSchedule(
+  req: Request<{ groupId: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const saved = await saveGroupSchedule(req.user!.userId, req.params.groupId, req.body);
+
+    res.status(200).json(saved);
   } catch (error) {
     next(error);
   }

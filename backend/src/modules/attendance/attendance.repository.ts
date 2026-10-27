@@ -286,3 +286,44 @@ export async function saveSheet(
     client.release();
   }
 }
+
+/* -------------------------- Classes on a given day ------------------------- */
+
+export type ScheduledClassRow = {
+  groupId: string;
+  groupName: string;
+  gradeId: string;
+  gradeName: string;
+  startTime: string;
+  taken: boolean;
+};
+
+// The classes a teacher's timetable has on `day` ("YYYY-MM-DD", Egypt's
+// calendar), earliest first, each marked "taken" once attendance exists for
+// it that day. The plan (group_schedules) joined with the facts (class_sessions).
+export async function findScheduledClassesOn(
+  teacherId: string,
+  day: string
+): Promise<ScheduledClassRow[]> {
+  const result = await pool.query<ScheduledClassRow>(
+    `
+      SELECT
+        gs.group_id::text AS "groupId",
+        g.name AS "groupName",
+        gr.id::text AS "gradeId",
+        gr.name AS "gradeName",
+        to_char(gs.start_time, 'HH24:MI') AS "startTime",
+        cs.id IS NOT NULL AS taken
+      FROM group_schedules gs
+      JOIN groups g ON g.id = gs.group_id
+      JOIN grades gr ON gr.id = g.grade_id
+      LEFT JOIN class_sessions cs ON cs.group_id = gs.group_id AND cs.held_on = $2::date
+      WHERE gs.teacher_id = $1
+        AND gs.weekday = EXTRACT(DOW FROM $2::date)
+      ORDER BY gs.start_time, gr.created_at, gr.id, g.created_at, g.id
+    `,
+    [teacherId, day]
+  );
+
+  return result.rows;
+}

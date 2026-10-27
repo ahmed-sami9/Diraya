@@ -187,7 +187,7 @@ export async function findSchedulesByGroups(
 }
 
 export type ReplaceScheduleResult =
-  | { status: 'saved'; slots: ScheduleSlot[] }
+  | { status: 'saved'; slots: ScheduleSlot[]; group: GroupRow & { gradeId: string } }
   | { status: 'not-found' };
 
 // Replaces a group's whole timetable with `slots` (an empty list clears it).
@@ -208,12 +208,17 @@ export async function replaceGroupSchedule(
   try {
     await client.query('BEGIN');
 
-    const group = await client.query(
-      `SELECT 1 FROM groups WHERE teacher_id = $1 AND id = $2 FOR UPDATE`,
+    const group = await client.query<GroupRow & { gradeId: string }>(
+      `
+        SELECT id::text AS id, name, grade_id::text AS "gradeId"
+        FROM groups
+        WHERE teacher_id = $1 AND id = $2
+        FOR UPDATE
+      `,
       [teacherId, groupId]
     );
 
-    if (group.rowCount === 0) {
+    if (!group.rows[0]) {
       await client.query('ROLLBACK');
       return { status: 'not-found' };
     }
@@ -241,6 +246,7 @@ export async function replaceGroupSchedule(
     const weekPosition = (slot: ScheduleSlot) => (slot.weekday + 1) % 7;
     return {
       status: 'saved',
+      group: group.rows[0],
       slots: saved.rows.sort(
         (a, b) => weekPosition(a) - weekPosition(b) || a.startTime.localeCompare(b.startTime)
       ),
@@ -253,3 +259,46 @@ export async function replaceGroupSchedule(
   }
 }
 
+// Each grade's next class, from now: the soonest upcoming slot across all its
+// groups' schedules. `now` is a parameter so tests can fix the clock.
+//
+// Worked out in Egypt's local time: this week's day for the slot, plus a week
+// if that moment has already passed. A class that started a minute ago counts
+// as next week's: it's no longer "next".
+export async function findNextSessions(
+  teacherId: string,
+  gradeIds: string[],
+  now: Date
+): Promise<{ gradeId: string; groupName: string; startsAt: Date }[]> {
+  const result = await pool.query<{ gradeId: string; groupName: string; startsAt: Date }>(
+    `
+      SELECT DISTINCT ON (g.grade_id)
+        g.grade_id::text AS "gradeId",
+        g.name AS "groupName",
+        next.starts_at AS "startsAt"
+      FROM group_schedules gs
+      JOIN groups g ON g.id = gs.group_id
+      CROSS JOIN LATERAL (
+        SELECT $3::timestamptz AT TIME ZONE 'Africa/Cairo' AS now_local
+      ) clock
+      CROSS JOIN LATERAL (
+        SELECT clock.now_local::date
+          + ((gs.weekday - EXTRACT(DOW FROM clock.now_local)::int + 7) % 7)
+          + gs.start_time AS this_week
+      ) slot
+      CROSS JOIN LATERAL (
+        SELECT (
+          CASE WHEN slot.this_week > clock.now_local
+            THEN slot.this_week
+            ELSE slot.this_week + INTERVAL '7 days'
+          END
+        ) AT TIME ZONE 'Africa/Cairo' AS starts_at
+      ) next
+      WHERE gs.teacher_id = $1 AND g.grade_id = ANY ($2::bigint[])
+      ORDER BY g.grade_id, next.starts_at, g.name
+    `,
+    [teacherId, gradeIds, now]
+  );
+
+  return result.rows;
+}

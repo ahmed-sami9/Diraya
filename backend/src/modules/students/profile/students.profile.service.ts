@@ -1,4 +1,6 @@
 import { toAttendanceRate } from '../../attendance/attendance.rules';
+import { findSchedulesByGroups } from '../../groups/groups.repository';
+import { toSessions } from '../../groups/groups.service';
 import { StudentErrors } from '../students.errors';
 import type { PaymentStatus } from '../students.service';
 
@@ -123,9 +125,10 @@ export async function getStudentProfile(
 
   if (!row) throw StudentErrors.notFound();
 
-  const [counts, [lastSession]] = await Promise.all([
+  const [counts, [lastSession], slots] = await Promise.all([
     countAttendance(studentId),
     findAttendanceRecords(studentId, 1),
+    findSchedulesByGroups(teacherId, [row.group_id]),
   ]);
 
   return {
@@ -133,8 +136,7 @@ export async function getStudentProfile(
     code: row.code,
     name: row.name,
     grade: { id: row.grade_id, name: row.grade_name },
-    // The weekly schedule isn't stored yet (same as the grade page).
-    group: { id: row.group_id, name: row.group_name, sessions: [] },
+    group: { id: row.group_id, name: row.group_name, sessions: toSessions(slots) },
     // Stored nullable for students added before the column existed.
     parentPhone: row.parent_phone ?? '',
     phone: row.phone,

@@ -72,7 +72,10 @@ describe('replaceGroupSchedule', () => {
       { weekday: 6, startTime: '16:00' },
       { weekday: 2, startTime: '16:00' },
     ];
-    assert.deepEqual(result, { status: 'saved', slots: expected });
+    assert.equal(result.status, 'saved');
+    assert.deepEqual(result.status === 'saved' && result.slots, expected);
+    // It also says which group and grade it saved, for the endpoint's answer.
+    assert.equal(result.status === 'saved' && result.group.id, t.groups[0]);
     assert.deepEqual(await scheduleOf(t.id, t.groups[0]!), expected);
   });
 

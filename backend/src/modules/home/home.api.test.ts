@@ -13,6 +13,7 @@ import { assertTestDatabase } from '../../test/assertTestDatabase';
 import { AUTH_COOKIE_NAME } from '../auth/auth.cookie';
 import { startTeacherSession } from '../auth/session/auth.session.service';
 import { countStudents } from '../students/students.repository';
+import { todayInCairo } from '../../utils/cairoDate';
 
 let server: Server;
 let baseUrl = '';
@@ -91,7 +92,9 @@ describe('GET /teacher/home', () => {
     const [status, body] = await getHome(t.token);
 
     assert.equal(status, 200);
-    assert.deepEqual(body, { summary: { students: { total: 0, joinedThisMonth: 0 } } });
+    assert.deepEqual(body.summary.students, { total: 0, joinedThisMonth: 0 });
+    // No timetable yet: no classes today, and today is Egypt's date.
+    assert.deepEqual(body.summary.classesToday, { date: todayInCairo(), classes: [] });
   });
 
   it('counts all of this teacher’s students, and who joined this month', async () => {
