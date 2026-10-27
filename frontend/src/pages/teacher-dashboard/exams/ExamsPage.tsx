@@ -12,6 +12,7 @@ import { todayInCairo } from '../../../utils/cairoDate';
 
 import ExamFormDialog from './components/ExamFormDialog';
 import { MissingMarksBanner, PastExamsTable, UpcomingExams } from './components/ExamSections';
+import { examsMissingMarks } from './examHelpers';
 
 /* ---------------------------------- Page ---------------------------------- */
 
@@ -21,7 +22,7 @@ import { MissingMarksBanner, PastExamsTable, UpcomingExams } from './components/
 // The page owns the data, the filter and the dialog; the sections only display.
 //
 // Everything below the filter is DERIVED from one list: upcoming vs past
-// from today's date, the banner from entered < total. Nothing is copied
+// from today's date, the banner from examsMissingMarks. Nothing is copied
 // into extra state, so nothing can drift out of sync.
 function ExamsPage() {
   const examsData = useExams();
@@ -90,7 +91,7 @@ function ExamsPage() {
       .filter((exam) => exam.heldOn < today)
       .sort((a, b) => b.heldOn.localeCompare(a.heldOn)); // newest first
 
-    const missing = past.filter((exam) => exam.results.entered < exam.results.total);
+    const missing = examsMissingMarks(shown, today);
 
     return { upcoming, past, missing };
   }, [exams, gradeId, today]);

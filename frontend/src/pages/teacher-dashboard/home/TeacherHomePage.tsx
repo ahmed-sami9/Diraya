@@ -1,7 +1,10 @@
 import Card from '../../../components/Card';
 import { useHomeSummary, type HomeSummaryState } from '../../../hooks/home/useHomeSummary';
+import { useExams } from '../../../hooks/exams/useExams';
 import EmptyState from '../../../components/EmptyState';
 import { formatTime } from '../../../utils/formatSchedule';
+import { todayInCairo } from '../../../utils/cairoDate';
+import { examPath, examsMissingMarks, papersToMark } from '../exams/examHelpers';
 
 import StudentsIcon from '../../../components/icons/StudentsIcon';
 import CalendarIcon from '../../../components/icons/CalendarIcon';
@@ -57,14 +60,44 @@ function attendanceTile(state: HomeSummaryState): { value: string; hint: string;
   };
 }
 
+// The Papers to mark tile: the same rule as the Exams page's "Marks still
+// missing" banner. One exam waiting -> open it; several -> the Exams page.
+function marksTile(state: ReturnType<typeof useExams>['state']): {
+  value: string;
+  hint: string;
+  to: string;
+} {
+  const fallback = '/teacher/exams';
+
+  if (state.status === 'loading') return { value: '–', hint: 'Loading…', to: fallback };
+  if (state.status === 'error') return { value: '–', hint: 'Couldn’t load right now', to: fallback };
+
+  const missing = examsMissingMarks(state.exams, todayInCairo());
+  const [newest] = missing;
+
+  if (!newest) return { value: '0', hint: 'Nothing to mark', to: fallback };
+
+  const value = formatCount(papersToMark(missing));
+
+  if (missing.length === 1) {
+    return { value, hint: `${newest.title} · ${newest.grade.name}`, to: examPath(newest.id) };
+  }
+
+  return { value, hint: `${newest.title} + ${missing.length - 1} more`, to: fallback };
+}
+
 /**
- * Teacher Home. The Students and Attendance tiles and Today's schedule read
- * GET /teacher/home; the rest still show their empty state until built.
+ * Teacher Home. Students, Attendance and Today's schedule read GET
+ * /teacher/home; Papers to mark reads the exams list (GET /teacher/exams).
+ * The rest still show their empty state until built.
  */
 function TeacherHomePage() {
   const { state, reload } = useHomeSummary();
   const students = studentsTile(state);
   const attendance = attendanceTile(state);
+  // The exams list, the same one the Exams page reads (see marksTile).
+  const exams = useExams();
+  const marks = marksTile(exams.state);
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,10 +123,10 @@ function TeacherHomePage() {
           icon={<CalendarIcon className="h-[18px] w-[18px]" />}
         />
         <SummaryTile
-          to="/teacher/exams"
+          to={marks.to}
           label="Papers to mark"
-          value="0"
-          hint="Nothing to mark"
+          value={marks.value}
+          hint={marks.hint}
           icon={<ExamsIcon className="h-[18px] w-[18px]" />}
         />
         <SummaryTile

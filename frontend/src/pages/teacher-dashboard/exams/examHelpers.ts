@@ -1,4 +1,4 @@
-import type { Exam, ExamKind, ExamResultRow } from '../../../api/exams/exams';
+import type { Exam, ExamKind, ExamResultRow, ExamSummary, IsoDay } from '../../../api/exams/exams';
 
 // What both exam pages share: how dates read, what the colours mean, and how
 // a set of results is summarised. Pure functions only, no React.
@@ -25,6 +25,21 @@ export const shortDay = formatter({ weekday: 'short', day: 'numeric', month: 'sh
 // Whole days between two ISO days (both at noon UTC, so always exact).
 export const daysBetween = (from: string, to: string) =>
   Math.round((asDate(to).getTime() - asDate(from).getTime()) / 86_400_000);
+
+/* ------------------------------ Missing marks ------------------------------ */
+
+// Past exams that still have students with no result, newest first. "Past"
+// means before today in Egypt: an exam held today may not have happened yet.
+// Shared by the Exams page banner and the Home tile, so they always agree.
+export function examsMissingMarks(exams: ExamSummary[], today: IsoDay): ExamSummary[] {
+  return exams
+    .filter((exam) => exam.heldOn < today && exam.results.entered < exam.results.total)
+    .sort((a, b) => b.heldOn.localeCompare(a.heldOn));
+}
+
+// How many students' papers those exams are still waiting for.
+export const papersToMark = (exams: ExamSummary[]) =>
+  exams.reduce((sum, exam) => sum + exam.results.total - exam.results.entered, 0);
 
 /* ---------------------------------- Tones --------------------------------- */
 
