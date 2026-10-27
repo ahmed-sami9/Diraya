@@ -153,3 +153,103 @@ export async function deleteGroupMovingStudents(
     client.release();
   }
 }
+
+/* -------------------------------- Schedules ------------------------------- */
+
+// One weekly slot. weekday: 0 = Sunday ... 6 = Saturday. startTime: "16:00".
+export type ScheduleSlot = {
+  weekday: number;
+  startTime: string;
+};
+
+export type GroupScheduleRow = ScheduleSlot & { groupId: string };
+
+// Egypt's week starts on Saturday, so Saturday sorts first: (6 + 1) % 7 = 0.
+const WEEK_ORDER = '(weekday + 1) % 7, start_time';
+
+// The timetables of several groups in one query (a grade page shows them all).
+// Groups that aren't this teacher's simply return nothing.
+export async function findSchedulesByGroups(
+  teacherId: string,
+  groupIds: string[]
+): Promise<GroupScheduleRow[]> {
+  const result = await pool.query<GroupScheduleRow>(
+    `
+      SELECT group_id::text AS "groupId", weekday, to_char(start_time, 'HH24:MI') AS "startTime"
+      FROM group_schedules
+      WHERE teacher_id = $1 AND group_id = ANY ($2::bigint[])
+      ORDER BY group_id, ${WEEK_ORDER}
+    `,
+    [teacherId, groupIds]
+  );
+
+  return result.rows;
+}
+
+export type ReplaceScheduleResult =
+  | { status: 'saved'; slots: ScheduleSlot[] }
+  | { status: 'not-found' };
+
+// Replaces a group's whole timetable with `slots` (an empty list clears it).
+// Replace-all instead of adding and removing slots one by one: the form
+// always sends the full week, and there's no half-edited timetable to handle.
+//
+// One transaction, and the group's row is locked first (FOR UPDATE): two
+// saves from two tabs run one after the other instead of deleting each
+// other's rows halfway. If anything fails (a duplicate weekday, a bad time),
+// the old timetable is left exactly as it was.
+export async function replaceGroupSchedule(
+  teacherId: string,
+  groupId: string,
+  slots: ScheduleSlot[]
+): Promise<ReplaceScheduleResult> {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const group = await client.query(
+      `SELECT 1 FROM groups WHERE teacher_id = $1 AND id = $2 FOR UPDATE`,
+      [teacherId, groupId]
+    );
+
+    if (group.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { status: 'not-found' };
+    }
+
+    await client.query(`DELETE FROM group_schedules WHERE group_id = $1`, [groupId]);
+
+    const saved = await client.query<ScheduleSlot>(
+      `
+        INSERT INTO group_schedules (teacher_id, group_id, weekday, start_time)
+        SELECT $1, $2, slot.weekday, slot.start_time
+        FROM unnest($3::smallint[], $4::time[]) AS slot(weekday, start_time)
+        RETURNING weekday, to_char(start_time, 'HH24:MI') AS "startTime"
+      `,
+      [
+        teacherId,
+        groupId,
+        slots.map((slot) => slot.weekday),
+        slots.map((slot) => slot.startTime),
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    // RETURNING doesn't promise an order; the week does.
+    const weekPosition = (slot: ScheduleSlot) => (slot.weekday + 1) % 7;
+    return {
+      status: 'saved',
+      slots: saved.rows.sort(
+        (a, b) => weekPosition(a) - weekPosition(b) || a.startTime.localeCompare(b.startTime)
+      ),
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
