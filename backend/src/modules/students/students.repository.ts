@@ -210,3 +210,27 @@ export async function insertStudentWithCode(
     client.release();
   }
 }
+
+// The Home page's student numbers, counted by the database: one row comes
+// back, not every student. `month` is "YYYY-MM"; a student joined in it if
+// they were added during that month on Egypt's calendar.
+export async function countStudents(
+  teacherId: string,
+  month: string
+): Promise<{ total: number; joined_in_month: number }> {
+  const result = await pool.query<{ total: number; joined_in_month: number }>(
+    `
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (
+          WHERE date_trunc('month', created_at AT TIME ZONE 'Africa/Cairo')::date = $2::date
+        )::int AS joined_in_month
+      FROM students
+      WHERE teacher_id = $1
+    `,
+    [teacherId, `${month}-01`]
+  );
+
+  return result.rows[0]!;
+}
+

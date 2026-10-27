@@ -1,4 +1,5 @@
 import { isForeignKeyViolation } from '../../errors/pgErrors';
+import { currentMonthInCairo } from '../../utils/cairoDate';
 
 import { toAttendanceRate } from '../attendance/attendance.rules';
 
@@ -7,6 +8,7 @@ import { gradeExists } from '../grades/grades.repository';
 import { GroupErrors } from '../groups/groups.errors';
 
 import {
+  countStudents,
   findStudentsByGrade,
   insertStudentWithCode,
   searchStudentsByName,
@@ -114,3 +116,18 @@ export async function addStudent(
 
   return toGradeStudent(result.student);
 }
+
+/* ------------------------------ Home summary ------------------------------ */
+
+export type StudentCounts = {
+  total: number;
+  joinedThisMonth: number;
+};
+
+// "This month" is the month in Egypt, the same calendar payments use.
+export async function getStudentCounts(teacherId: string): Promise<StudentCounts> {
+  const counts = await countStudents(teacherId, currentMonthInCairo());
+
+  return { total: counts.total, joinedThisMonth: counts.joined_in_month };
+}
+

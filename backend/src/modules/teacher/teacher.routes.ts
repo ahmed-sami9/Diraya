@@ -8,12 +8,12 @@ import attendanceRoutes from '../attendance/attendance.routes';
 import examsRoutes from '../exams/exams.routes';
 import paymentsRoutes from '../payments/payments.routes';
 import accountRoutes from '../account/account.routes';
+import homeRoutes from '../home/home.routes';
 
 const router = Router();
 
-router.post('/home', authenticate, (req, res) => {
-  res.send('teacher');
-});
+// The Home page's summary: one request for all of its numbers.
+router.use('/home', authenticate, homeRoutes);
 
 // Everything a signed-in teacher manages. `authenticate` runs first on each,
 // so the routers inside can rely on req.user being set.

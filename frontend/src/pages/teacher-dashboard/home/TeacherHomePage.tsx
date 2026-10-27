@@ -1,4 +1,5 @@
 import Card from '../../../components/Card';
+import { useHomeSummary, type HomeSummaryState } from '../../../hooks/home/useHomeSummary';
 import EmptyState from '../../../components/EmptyState';
 
 import StudentsIcon from '../../../components/icons/StudentsIcon';
@@ -12,11 +13,34 @@ import SummaryTile from './components/SummaryTile';
 import GettingStartedCard from './components/GettingStartedCard';
 import QuickActions from './components/QuickActions';
 
+const formatCount = (value: number) => value.toLocaleString('en-GB');
+
+// The Students tile's number and the line under it.
+function studentsTile(state: HomeSummaryState): { value: string; hint: string } {
+  if (state.status === 'loading') return { value: '–', hint: 'Loading…' };
+  if (state.status === 'error') return { value: '–', hint: 'Couldn’t load right now' };
+
+  const { total, joinedThisMonth } = state.summary.students;
+
+  if (total === 0) return { value: '0', hint: 'Add your first student' };
+
+  return {
+    value: formatCount(total),
+    hint:
+      joinedThisMonth > 0
+        ? `+${formatCount(joinedThisMonth)} joined this month`
+        : 'No new students this month',
+  };
+}
+
 /**
- * Teacher Home, empty state: what a teacher sees before any students,
- * classes, exams or payments exist. The filled state arrives with the API.
+ * Teacher Home. The Students tile reads GET /teacher/home; the other tiles and
+ * cards still show their empty state until their part is built.
  */
 function TeacherHomePage() {
+  const { state } = useHomeSummary();
+  const students = studentsTile(state);
+
   return (
     <div className="flex flex-col gap-6">
       {/* The visible greeting lives in the navbar; this names the page for screen readers. */}
@@ -29,8 +53,8 @@ function TeacherHomePage() {
         <SummaryTile
           to="/teacher/students"
           label="Students"
-          value="0"
-          hint="Add your first student"
+          value={students.value}
+          hint={students.hint}
           icon={<StudentsIcon className="h-[18px] w-[18px]" />}
         />
         <SummaryTile
