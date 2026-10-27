@@ -26,6 +26,24 @@ export const shortDay = formatter({ weekday: 'short', day: 'numeric', month: 'sh
 export const daysBetween = (from: string, to: string) =>
   Math.round((asDate(to).getTime() - asDate(from).getTime()) / 86_400_000);
 
+// "Today", "Tomorrow", "In 5 days": how far away an upcoming exam is.
+export function whenLabel(today: IsoDay, heldOn: IsoDay): string {
+  const days = daysBetween(today, heldOn);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  return `In ${days} days`;
+}
+
+/* -------------------------------- Upcoming -------------------------------- */
+
+// Exams from today on, soonest first. An exam held today still counts: the
+// teacher may not have held it yet. Shared by the Exams page and Home.
+export function upcomingExams(exams: ExamSummary[], today: IsoDay): ExamSummary[] {
+  return exams
+    .filter((exam) => exam.heldOn >= today)
+    .sort((a, b) => a.heldOn.localeCompare(b.heldOn));
+}
+
 /* ------------------------------ Missing marks ------------------------------ */
 
 // Past exams that still have students with no result, newest first. "Past"

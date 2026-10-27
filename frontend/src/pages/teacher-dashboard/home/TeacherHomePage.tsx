@@ -20,6 +20,7 @@ import SummaryTile from './components/SummaryTile';
 import GettingStartedCard from './components/GettingStartedCard';
 import QuickActions from './components/QuickActions';
 import TodayScheduleCard from './components/TodayScheduleCard';
+import UpcomingExamsCard from './components/UpcomingExamsCard';
 import { attendanceLink, todayProgress } from './todayClasses';
 
 const formatCount = (value: number) => value.toLocaleString('en-GB');
@@ -115,8 +116,8 @@ function overdueTile(state: ReturnType<typeof usePaymentsOverview>['state']): {
 
 /**
  * Teacher Home. Students, Attendance and Today's schedule read GET
- * /teacher/home; Papers to mark reads the exams list and Payments overdue
- * the payments overview, the same requests their own pages make.
+ * /teacher/home; Papers to mark and Upcoming exams read the exams list, and
+ * Payments overdue the payments overview: the same requests their own pages make.
  */
 function TeacherHomePage() {
   const { state, reload } = useHomeSummary();
@@ -189,14 +190,7 @@ function TeacherHomePage() {
         <div className="flex min-w-0 flex-col gap-6">
           <QuickActions />
 
-          <Card title="Upcoming exams">
-            <EmptyState
-              icon={<ExamsIcon className="h-6 w-6" />}
-              title="No exams scheduled"
-              description="Create a quiz or exam and it will appear here."
-              action={{ label: 'Create quiz', to: '/teacher/exams' }}
-            />
-          </Card>
+          <UpcomingExamsCard state={exams.state} today={todayInCairo()} onRetry={exams.reload} />
 
           <Card title="Recent activity">
             <EmptyState

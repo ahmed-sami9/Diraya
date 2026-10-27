@@ -12,7 +12,7 @@ import { todayInCairo } from '../../../utils/cairoDate';
 
 import ExamFormDialog from './components/ExamFormDialog';
 import { MissingMarksBanner, PastExamsTable, UpcomingExams } from './components/ExamSections';
-import { examsMissingMarks } from './examHelpers';
+import { examsMissingMarks, upcomingExams } from './examHelpers';
 
 /* ---------------------------------- Page ---------------------------------- */
 
@@ -81,12 +81,9 @@ function ExamsPage() {
   const { upcoming, past, missing } = useMemo(() => {
     const shown = gradeId ? exams.filter((exam) => exam.grade.id === gradeId) : exams;
 
-    // ISO days compare correctly as plain strings. An exam held today is
-    // still "upcoming": the teacher may not have held it yet.
-    const upcoming = shown
-      .filter((exam) => exam.heldOn >= today)
-      .sort((a, b) => a.heldOn.localeCompare(b.heldOn)); // soonest first
+    const upcoming = upcomingExams(shown, today);
 
+    // ISO days compare correctly as plain strings.
     const past = shown
       .filter((exam) => exam.heldOn < today)
       .sort((a, b) => b.heldOn.localeCompare(a.heldOn)); // newest first

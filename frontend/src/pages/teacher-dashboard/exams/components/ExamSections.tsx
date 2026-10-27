@@ -9,22 +9,15 @@ import {
   TONE_TEXT,
   asDate,
   dayNumber,
-  daysBetween,
   examPath,
   shortDay,
   shortMonth,
   toneOf,
+  whenLabel,
 } from '../examHelpers';
 
 // The three sections of the exams list page, kept in one file for now.
 // Each can move to its own file later without changing anything else.
-
-function whenLabel(today: string, heldOn: string) {
-  const days = daysBetween(today, heldOn);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Tomorrow';
-  return `In ${days} days`;
-}
 
 function SectionTitle({ id, children }: { id: string; children: string }) {
   return (

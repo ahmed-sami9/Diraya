@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { ExamSummary } from '../../../api/exams/exams';
-import { examsMissingMarks, papersToMark } from './examHelpers.ts';
+import { examsMissingMarks, papersToMark, upcomingExams, whenLabel } from './examHelpers.ts';
 
 const TODAY = '2026-10-27';
 
@@ -55,5 +55,36 @@ describe('papersToMark', () => {
 
   it('nothing missing: 0', () => {
     assert.equal(papersToMark([]), 0);
+  });
+});
+
+describe('upcomingExams', () => {
+  it('an exam held today is still upcoming: it may not have happened yet', () => {
+    assert.deepEqual(upcomingExams([exam('1', TODAY, 0, 10)], TODAY).map((item) => item.id), ['1']);
+  });
+
+  it('past exams are not upcoming', () => {
+    assert.deepEqual(upcomingExams([exam('1', '2026-10-26', 0, 10)], TODAY), []);
+  });
+
+  it('lists the soonest first, whatever order they came in', () => {
+    const upcoming = upcomingExams(
+      [exam('later', '2026-11-20', 0, 5), exam('soon', '2026-10-29', 0, 5), exam('mid', '2026-11-02', 0, 5)],
+      TODAY
+    );
+
+    assert.deepEqual(upcoming.map((item) => item.id), ['soon', 'mid', 'later']);
+  });
+});
+
+describe('whenLabel', () => {
+  it('says today, tomorrow, or how many days away', () => {
+    assert.equal(whenLabel(TODAY, TODAY), 'Today');
+    assert.equal(whenLabel(TODAY, '2026-10-28'), 'Tomorrow');
+    assert.equal(whenLabel(TODAY, '2026-11-02'), 'In 6 days');
+  });
+
+  it('counts calendar days across a month end', () => {
+    assert.equal(whenLabel('2026-10-31', '2026-11-01'), 'Tomorrow');
   });
 });
