@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { MyNote } from '../api/notes/notes';
-import { groupNotes, searchNotes, sortNotes, topNotes } from './myNotes.ts';
+import { groupNotes, noteWhen, searchNotes, sortNotes, topNotes } from './myNotes.ts';
 
 // Wednesday 28 Oct 2026 in Egypt. Its week started on Saturday 24 Oct.
 const TODAY = '2026-10-28';
@@ -120,5 +120,27 @@ describe('groupNotes', () => {
       groupNotes(sorted, TODAY).map((group) => group.key),
       ['earlier', 'today']
     );
+  });
+});
+
+describe('noteWhen', () => {
+  // 17:00 on Wednesday 28 Oct 2026 in Egypt.
+  const NOW = new Date('2026-10-28T17:00+03:00');
+
+  it('today: just the time', () => {
+    assert.equal(noteWhen(note('1', '2026-10-28T10:42'), NOW), '10:42 am');
+  });
+
+  it('earlier this year: the day and date', () => {
+    assert.equal(noteWhen(note('1', '2026-10-26T09:00'), NOW), 'Mon 26 Oct');
+  });
+
+  it('a previous year: with the year', () => {
+    assert.equal(noteWhen(note('1', '2025-09-12T09:00'), NOW), '12 Sept 2025'); // en-GB, like the rest of the app
+  });
+
+  it('says when the text was edited', () => {
+    const edited = { ...note('1', '2026-09-12T09:00'), updatedAt: new Date('2026-10-03T12:00+03:00').toISOString() };
+    assert.equal(noteWhen(edited, NOW), 'Sat 12 Sept · edited 3 Oct');
   });
 });

@@ -7,9 +7,9 @@ import { NOTE_MAX_LENGTH } from '../notesRules';
 interface NoteComposerProps {
   /** "page": a roomy box with a counter. "compact": one line, for the Home card. */
   variant: 'page' | 'compact';
-  // Saves the note; throws when the server refuses, so the box can say why.
-  // Not passed yet (no backend): the button stays disabled.
-  onAdd?: (text: string) => Promise<void>;
+  // Saves the note; throws when the server refuses, so the box keeps the
+  // text and says why.
+  onAdd: (text: string) => Promise<void>;
 }
 
 /** The "write a note" box. Enter saves, Shift+Enter starts a new line. */
@@ -20,11 +20,11 @@ function NoteComposer({ variant, onAdd }: NoteComposerProps) {
 
   const fieldId = useId();
   const trimmed = text.trim();
-  const canSave = Boolean(onAdd) && trimmed.length > 0 && !isSaving;
+  const canSave = trimmed.length > 0 && !isSaving;
   const isPage = variant === 'page';
 
   const save = async () => {
-    if (!onAdd || !canSave) return;
+    if (!canSave) return;
 
     setIsSaving(true);
     setError(null);

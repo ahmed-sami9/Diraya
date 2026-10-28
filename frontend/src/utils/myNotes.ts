@@ -93,3 +93,51 @@ export function groupNotes(sorted: MyNote[], today: string): NoteGroup[] {
 
   return [...groups].map(([key, notes]) => ({ key, label: LABELS[key], notes }));
 }
+
+/* ---------------------------------- Dates --------------------------------- */
+
+const cairoTime = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Africa/Cairo',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+const cairoShortDay = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Africa/Cairo',
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+});
+const cairoFullDate = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Africa/Cairo',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+const cairoDayMonth = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Africa/Cairo',
+  day: 'numeric',
+  month: 'short',
+});
+
+// When a note was written, as short as it can be while still clear:
+//   today        -> "10:42 am"
+//   this year    -> "Mon 26 Oct"
+//   older        -> "12 Sep 2025"
+// Plus " · edited 3 Oct" when its text changed later (pinning doesn't count).
+export function noteWhen(note: MyNote, now: Date = new Date()): string {
+  const written = new Date(note.createdAt);
+  const day = cairoDay.format(written);
+  const today = cairoDay.format(now);
+
+  const when =
+    day === today
+      ? cairoTime.format(written).replace(/\s/g, ' ')
+      : day.slice(0, 4) === today.slice(0, 4)
+        ? cairoShortDay.format(written).replace(',', '')
+        : cairoFullDate.format(written);
+
+  if (note.updatedAt === note.createdAt) return when;
+
+  return `${when} · edited ${cairoDayMonth.format(new Date(note.updatedAt))}`;
+}
