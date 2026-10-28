@@ -56,9 +56,10 @@ export async function insertTeacherNote(teacherId: string, text: string): Promis
   return result.rows[0]!;
 }
 
+// undefined = leave as it is (zod's optional fields arrive as undefined).
 export type TeacherNoteChanges = {
-  text?: string;
-  pinned?: boolean;
+  text?: string | undefined;
+  pinned?: boolean | undefined;
 };
 
 // Changes the text, the pin, or both; a field left out keeps its value.

@@ -9,6 +9,7 @@ import examsRoutes from '../exams/exams.routes';
 import paymentsRoutes from '../payments/payments.routes';
 import accountRoutes from '../account/account.routes';
 import homeRoutes from '../home/home.routes';
+import notesRoutes from '../notes/notes.routes';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/attendance', authenticate, attendanceRoutes);
 router.use('/exams', authenticate, examsRoutes);
 router.use('/payments', authenticate, paymentsRoutes);
 router.use('/account', authenticate, accountRoutes);
+router.use('/notes', authenticate, notesRoutes);
 
 export default router;
