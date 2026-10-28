@@ -43,6 +43,9 @@ const GradePaymentsPage = lazy(
   () => import('./pages/teacher-dashboard/payment/GradePaymentsPage')
 );
 
+// The teacher's own notes, from the sidebar and the Home card.
+const NotesPage = lazy(() => import('./pages/teacher-dashboard/notes/NotesPage'));
+
 // Settings: a frame (header) with one child route per section.
 const SettingsLayout = lazy(() => import('./pages/teacher-dashboard/settings/SettingsLayout'));
 const SettingsPage = lazy(() => import('./pages/teacher-dashboard/settings/SettingsPage'));
@@ -172,6 +175,11 @@ function App() {
           <Route
             path="payments/grades/:gradeId"
             element={<GradePaymentsPage />}
+          />
+
+          <Route
+            path="notes"
+            element={<NotesPage />}
           />
 
           <Route

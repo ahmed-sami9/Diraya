@@ -5,6 +5,7 @@ import {
   StudentsIcon,
   ExamsIcon,
   PaymentsIcon,
+  NotesIcon,
   SettingsIcon,
 } from '../../components/icons/index.ts';
 
@@ -42,6 +43,7 @@ export const navItems: NavItem[] = [
     end: false,
     primaryAction: teacherActions.recordPayment,
   },
+  { to: '/teacher/notes', label: 'My notes', icon: NotesIcon, end: false },
   { to: '/teacher/settings', label: 'Settings', icon: SettingsIcon, end: false },
 ];
 

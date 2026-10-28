@@ -13,7 +13,6 @@ import StudentsIcon from '../../../components/icons/StudentsIcon';
 import CalendarIcon from '../../../components/icons/CalendarIcon';
 import ExamsIcon from '../../../components/icons/ExamsIcon';
 import PaymentsIcon from '../../../components/icons/PaymentsIcon';
-import CheckCircleIcon from '../../../components/icons/CheckCircleIcon';
 import ActivityIcon from '../../../components/icons/ActivityIcon';
 
 import SummaryTile from './components/SummaryTile';
@@ -21,6 +20,7 @@ import GettingStartedCard from './components/GettingStartedCard';
 import QuickActions from './components/QuickActions';
 import TodayScheduleCard from './components/TodayScheduleCard';
 import UpcomingExamsCard from './components/UpcomingExamsCard';
+import NotesCard from './components/NotesCard';
 import { attendanceLink, todayProgress } from './todayClasses';
 
 const formatCount = (value: number) => value.toLocaleString('en-GB');
@@ -176,14 +176,7 @@ function TeacherHomePage() {
 
           <TodayScheduleCard state={state} onRetry={reload} />
 
-          <Card title="Needs your attention">
-            <EmptyState
-              tone="success"
-              icon={<CheckCircleIcon className="h-6 w-6" />}
-              title="You're all caught up"
-              description="Overdue payments, repeated absences and unmarked papers will show up here."
-            />
-          </Card>
+          <NotesCard />
         </div>
 
         {/* Side column */}

@@ -12,3 +12,5 @@ export { default as ExamsIcon } from './ExamsIcon';
 export { default as StudentsIcon } from './StudentsIcon';
 export { default as CloseIcon } from './CloseIcon';
 export { default as HamburgerIcon } from './HamburgerIcon';
+export { default as NotesIcon } from './NotesIcon';
+export { default as PinIcon } from './PinIcon';
