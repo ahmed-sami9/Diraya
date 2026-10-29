@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 
 import { pool } from '../../config/db';
+import { logActivity } from '../activity/activity.repository';
 
 // Ownership is always checked through the student (payments have no teacher_id).
 // Months travel as "YYYY-MM" and are stored as the 1st of the month.
@@ -89,15 +90,16 @@ async function inTransaction<T>(work: (client: PoolClient) => Promise<T>): Promi
   }
 }
 
-// Locks the student so two writes about them can't interleave.
+// Locks the student so two writes about them can't interleave. The name is
+// for recent activity.
 async function lockStudent(
   client: PoolClient,
   teacherId: string,
   studentId: string
-): Promise<{ grade_id: string } | null> {
-  const result = await client.query<{ grade_id: string }>(
+): Promise<{ grade_id: string; name: string } | null> {
+  const result = await client.query<{ grade_id: string; name: string }>(
     `
-      SELECT grade_id::text AS grade_id
+      SELECT grade_id::text AS grade_id, full_name AS name
       FROM students
       WHERE id = $1 AND teacher_id = $2
       FOR UPDATE
@@ -535,6 +537,15 @@ export async function recordPayment(
       [payment.id, parts.map((part) => toDate(part.month)), parts.map((part) => part.amount)]
     );
 
+    // Recent activity, saved with the payment. A repeated request returned
+    // above, so a double click is never logged twice.
+    await logActivity(client, teacherId, 'payment.recorded', {
+      studentId: input.studentId,
+      studentName: student.name,
+      amount: input.amount,
+      months: parts.map((part) => part.month),
+    });
+
     return { status: 'recorded', paymentId: payment.id, gradeId: student.grade_id, parts };
   });
 }
@@ -546,40 +557,60 @@ export type VoidPaymentOutcome =
   | { status: 'not-found' }
   | { status: 'already-voided' };
 
+// A transaction now, so the void and its recent-activity entry are saved
+// together or not at all.
 export async function voidPayment(
   teacherId: string,
   paymentId: string,
   reason: string
 ): Promise<VoidPaymentOutcome> {
-  // "voided_at IS NULL" lets only one of two simultaneous voids succeed.
-  const updated = await pool.query<{ student_id: string; grade_id: string }>(
-    `
-      UPDATE payments p
-      SET voided_at = CURRENT_TIMESTAMP, void_reason = $3
-      FROM students s
-      WHERE p.id = $2
-        AND s.id = p.student_id
-        AND s.teacher_id = $1
-        AND p.voided_at IS NULL
-      RETURNING s.id::text AS student_id, s.grade_id::text AS grade_id
-    `,
-    [teacherId, paymentId, reason]
-  );
+  return inTransaction(async (client) => {
+    // "voided_at IS NULL" lets only one of two simultaneous voids succeed.
+    const updated = await client.query<{
+      student_id: string;
+      grade_id: string;
+      student_name: string;
+      amount: number;
+    }>(
+      `
+        UPDATE payments p
+        SET voided_at = CURRENT_TIMESTAMP, void_reason = $3
+        FROM students s
+        WHERE p.id = $2
+          AND s.id = p.student_id
+          AND s.teacher_id = $1
+          AND p.voided_at IS NULL
+        RETURNING s.id::text AS student_id, s.grade_id::text AS grade_id,
+                  s.full_name AS student_name, p.amount
+      `,
+      [teacherId, paymentId, reason]
+    );
 
-  const row = updated.rows[0];
-  if (row) return { status: 'voided', studentId: row.student_id, gradeId: row.grade_id };
+    const row = updated.rows[0];
 
-  const existing = await pool.query(
-    `
-      SELECT 1
-      FROM payments p
-      JOIN students s ON s.id = p.student_id
-      WHERE p.id = $2 AND s.teacher_id = $1
-    `,
-    [teacherId, paymentId]
-  );
+    if (row) {
+      await logActivity(client, teacherId, 'payment.voided', {
+        studentId: row.student_id,
+        studentName: row.student_name,
+        amount: row.amount,
+        reason,
+      });
 
-  return existing.rowCount ? { status: 'already-voided' } : { status: 'not-found' };
+      return { status: 'voided', studentId: row.student_id, gradeId: row.grade_id };
+    }
+
+    const existing = await client.query(
+      `
+        SELECT 1
+        FROM payments p
+        JOIN students s ON s.id = p.student_id
+        WHERE p.id = $2 AND s.teacher_id = $1
+      `,
+      [teacherId, paymentId]
+    );
+
+    return existing.rowCount ? { status: 'already-voided' } : { status: 'not-found' };
+  });
 }
 
 /* ---------------------------- Skip / unskip ------------------------------- */

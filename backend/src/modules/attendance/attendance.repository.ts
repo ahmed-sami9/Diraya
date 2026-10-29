@@ -1,4 +1,5 @@
 import { pool } from '../../config/db';
+import { logActivity } from '../activity/activity.repository';
 
 import type { AttendanceStatus } from './attendance.rules';
 
@@ -211,7 +212,8 @@ export type SaveSheetResult =
 //    the whole truth for this session (PUT replaces).
 export async function saveSheet(
   teacherId: string,
-  group: { gradeId: string; groupId: string },
+  // The names are for recent activity.
+  group: { gradeId: string; groupId: string; gradeName: string; groupName: string },
   day: string,
   records: RecordToSave[]
 ): Promise<SaveSheetResult> {
@@ -220,7 +222,7 @@ export async function saveSheet(
   try {
     await client.query('BEGIN');
 
-    const session = await client.query<{ id: string }>(
+    const session = await client.query<{ id: string; created: boolean }>(
       `
         INSERT INTO class_sessions (teacher_id, grade_id, group_id, held_on)
         VALUES ($1, $2, $3, $4::date)
@@ -230,13 +232,15 @@ export async function saveSheet(
             THEN CURRENT_TIMESTAMP
           ELSE class_sessions.edited_at
         END
-        RETURNING id::text AS id
+        RETURNING id::text AS id, (xmax = 0) AS created
       `,
       [teacherId, group.gradeId, group.groupId, day]
     );
+    // created: xmax = 0 means this row was just INSERTed, not UPDATEd by
+    // ON CONFLICT. It's how Postgres tells "first save" from "re-save".
 
     // INSERT ... ON CONFLICT DO UPDATE ... RETURNING always returns the row.
-    const sessionId = session.rows[0]!.id;
+    const { id: sessionId, created } = session.rows[0]!;
 
     const studentIds = records.map((record) => record.studentId);
 
@@ -275,6 +279,21 @@ export async function saveSheet(
       `,
       [sessionId, studentIds]
     );
+
+    // Recent activity for the FIRST save of a class only: correcting a sheet
+    // later isn't a new class, and would fill the feed with repeats.
+    // present = present + late, the same rule as everywhere else.
+    if (created) {
+      await logActivity(client, teacherId, 'attendance.taken', {
+        groupId: group.groupId,
+        groupName: group.groupName,
+        gradeName: group.gradeName,
+        day,
+        present: records.filter((record) => record.status === 'present' || record.status === 'late')
+          .length,
+        total: records.length,
+      });
+    }
 
     await client.query('COMMIT');
 

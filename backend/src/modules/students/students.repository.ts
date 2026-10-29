@@ -1,4 +1,5 @@
 import { pool } from '../../config/db';
+import { logActivity } from '../activity/activity.repository';
 
 export type StudentSearchRow = {
   id: string;
@@ -134,10 +135,10 @@ export async function insertStudentWithCode(
   try {
     await client.query('BEGIN');
 
-    const grade = await client.query(`SELECT 1 FROM grades WHERE id = $1 AND teacher_id = $2`, [
-      gradeId,
-      teacherId,
-    ]);
+    const grade = await client.query<{ name: string }>(
+      `SELECT name FROM grades WHERE id = $1 AND teacher_id = $2`,
+      [gradeId, teacherId]
+    );
 
     if (grade.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -148,8 +149,8 @@ export async function insertStudentWithCode(
     // otherwise a hand-made request could put a Grade 1 student in a
     // Grade 3 group. The composite foreign key refuses that too; checking
     // here gives a clear 404 instead of a database error.
-    const group = await client.query(
-      `SELECT 1 FROM groups WHERE id = $1 AND grade_id = $2 AND teacher_id = $3`,
+    const group = await client.query<{ name: string }>(
+      `SELECT name FROM groups WHERE id = $1 AND grade_id = $2 AND teacher_id = $3`,
       [input.groupId, gradeId, teacherId]
     );
 
@@ -198,9 +199,19 @@ export async function insertStudentWithCode(
       ]
     );
 
+    const student = result.rows[0]!;
+
+    // Recent activity, saved with the student: both, or neither.
+    await logActivity(client, teacherId, 'student.added', {
+      studentId: student.id,
+      studentName: student.name,
+      gradeName: grade.rows[0]!.name,
+      groupName: group.rows[0]!.name,
+    });
+
     await client.query('COMMIT');
 
-    return { status: 'created', student: result.rows[0]! };
+    return { status: 'created', student };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

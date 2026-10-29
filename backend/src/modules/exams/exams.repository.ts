@@ -1,4 +1,5 @@
 import { pool } from '../../config/db';
+import { logActivity } from '../activity/activity.repository';
 
 // SQL for exams and their results. Every query is scoped to the teacher,
 // either directly (WHERE teacher_id = ...) or through an exam that was
@@ -207,23 +208,52 @@ export type ExamInput = {
 // Adds an exam to one of the teacher's grades. INSERT ... SELECT checks the
 // grade is theirs in the same statement: another teacher's grade (or a
 // deleted one) inserts nothing, and the caller gets null.
+// A transaction, so the exam and its recent-activity entry are saved
+// together or not at all.
 export async function insertExam(
   teacherId: string,
   gradeId: string,
   input: ExamInput
 ): Promise<string | null> {
-  const result = await pool.query<{ id: string }>(
-    `
-      INSERT INTO exams (teacher_id, grade_id, title, kind, held_on, max_mark, pass_mark)
-      SELECT g.teacher_id, g.id, $3, $4, $5::date, $6, $7
-      FROM grades g
-      WHERE g.teacher_id = $1 AND g.id = $2
-      RETURNING id::text AS id
-    `,
-    [teacherId, gradeId, input.title, input.kind, input.heldOn, input.maxMark, input.passMark]
-  );
+  const client = await pool.connect();
 
-  return result.rows[0]?.id ?? null;
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query<{ id: string; grade_name: string }>(
+      `
+        INSERT INTO exams (teacher_id, grade_id, title, kind, held_on, max_mark, pass_mark)
+        SELECT g.teacher_id, g.id, $3, $4, $5::date, $6, $7
+        FROM grades g
+        WHERE g.teacher_id = $1 AND g.id = $2
+        RETURNING id::text AS id, (SELECT name FROM grades WHERE id = grade_id) AS grade_name
+      `,
+      [teacherId, gradeId, input.title, input.kind, input.heldOn, input.maxMark, input.passMark]
+    );
+
+    const exam = result.rows[0];
+
+    if (!exam) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await logActivity(client, teacherId, 'exam.added', {
+      examId: exam.id,
+      title: input.title,
+      gradeName: exam.grade_name,
+      heldOn: input.heldOn,
+    });
+
+    await client.query('COMMIT');
+
+    return exam.id;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /* ---------------------------------- Edit ---------------------------------- */
@@ -317,12 +347,22 @@ export async function saveResults(
   try {
     await client.query('BEGIN');
 
-    const exam = await client.query<{ grade_id: string; max_mark: number; held_on: string }>(
+    // title and grade name: for recent activity. FOR SHARE OF e locks the
+    // exam only, not its grade.
+    const exam = await client.query<{
+      grade_id: string;
+      max_mark: number;
+      held_on: string;
+      title: string;
+      grade_name: string;
+    }>(
       `
-        SELECT grade_id::text AS grade_id, max_mark, to_char(held_on, 'YYYY-MM-DD') AS held_on
-        FROM exams
-        WHERE teacher_id = $1 AND id = $2
-        FOR SHARE
+        SELECT e.grade_id::text AS grade_id, e.max_mark, to_char(e.held_on, 'YYYY-MM-DD') AS held_on,
+               e.title, g.name AS grade_name
+        FROM exams e
+        JOIN grades g ON g.id = e.grade_id
+        WHERE e.teacher_id = $1 AND e.id = $2
+        FOR SHARE OF e
       `,
       [teacherId, examId]
     );
@@ -395,6 +435,30 @@ export async function saveResults(
         'DELETE FROM exam_results WHERE exam_id = $1 AND student_id = ANY ($2::bigint[])',
         [examId, toClear]
       );
+    }
+
+    // Recent activity when marks were written (only clearing boxes isn't
+    // "entering marks"): how many of the exam's students now have a result,
+    // counted with the same roster as the exams list.
+    if (toWrite.length > 0) {
+      const counts = await client.query<{ entered: number; total: number }>(
+        `
+          SELECT
+            (SELECT COUNT(*)::int FROM exam_results r WHERE r.exam_id = e.id) AS entered,
+            (SELECT COUNT(*)::int FROM (${EXAM_ROSTER}) roster) AS total
+          FROM exams e
+          WHERE e.id = $1
+        `,
+        [examId]
+      );
+
+      await logActivity(client, teacherId, 'marks.entered', {
+        examId,
+        title: row.title,
+        gradeName: row.grade_name,
+        entered: counts.rows[0]!.entered,
+        total: counts.rows[0]!.total,
+      });
     }
 
     await client.query('COMMIT');

@@ -10,6 +10,7 @@ import paymentsRoutes from '../payments/payments.routes';
 import accountRoutes from '../account/account.routes';
 import homeRoutes from '../home/home.routes';
 import notesRoutes from '../notes/notes.routes';
+import activityRoutes from '../activity/activity.routes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/exams', authenticate, examsRoutes);
 router.use('/payments', authenticate, paymentsRoutes);
 router.use('/account', authenticate, accountRoutes);
 router.use('/notes', authenticate, notesRoutes);
+router.use('/activity', authenticate, activityRoutes);
 
 export default router;

@@ -150,7 +150,12 @@ export async function saveAttendanceSheet(
 
   const result = await saveSheet(
     teacherId,
-    { gradeId: group.grade_id, groupId: group.group_id },
+    {
+      gradeId: group.grade_id,
+      groupId: group.group_id,
+      gradeName: group.grade_name,
+      groupName: group.group_name,
+    },
     input.date,
     input.records.map((record) => ({
       studentId: record.studentId,
