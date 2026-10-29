@@ -1,8 +1,6 @@
-import Card from '../../../components/Card';
 import { useHomeSummary, type HomeSummaryState } from '../../../hooks/home/useHomeSummary';
 import { useExams } from '../../../hooks/exams/useExams';
 import { usePaymentsOverview } from '../../../hooks/payments/usePayments';
-import EmptyState from '../../../components/EmptyState';
 import { formatTime } from '../../../utils/formatSchedule';
 import { pluralize } from '../../../utils/formatSession';
 import { todayInCairo } from '../../../utils/cairoDate';
@@ -13,7 +11,6 @@ import StudentsIcon from '../../../components/icons/StudentsIcon';
 import CalendarIcon from '../../../components/icons/CalendarIcon';
 import ExamsIcon from '../../../components/icons/ExamsIcon';
 import PaymentsIcon from '../../../components/icons/PaymentsIcon';
-import ActivityIcon from '../../../components/icons/ActivityIcon';
 
 import SummaryTile from './components/SummaryTile';
 import GettingStartedCard from './components/GettingStartedCard';
@@ -21,6 +18,7 @@ import QuickActions from './components/QuickActions';
 import TodayScheduleCard from './components/TodayScheduleCard';
 import UpcomingExamsCard from './components/UpcomingExamsCard';
 import NotesCard from './components/NotesCard';
+import RecentActivityCard from './components/RecentActivityCard';
 import { attendanceLink, todayProgress } from './todayClasses';
 
 const formatCount = (value: number) => value.toLocaleString('en-GB');
@@ -117,7 +115,8 @@ function overdueTile(state: ReturnType<typeof usePaymentsOverview>['state']): {
 /**
  * Teacher Home. Students, Attendance and Today's schedule read GET
  * /teacher/home; Papers to mark and Upcoming exams read the exams list, and
- * Payments overdue the payments overview: the same requests their own pages make.
+ * Payments overdue the payments overview: the same requests their own pages
+ * make. My notes and Recent activity load their own data (their cards).
  */
 function TeacherHomePage() {
   const { state, reload } = useHomeSummary();
@@ -185,13 +184,7 @@ function TeacherHomePage() {
 
           <UpcomingExamsCard state={exams.state} today={todayInCairo()} onRetry={exams.reload} />
 
-          <Card title="Recent activity">
-            <EmptyState
-              icon={<ActivityIcon className="h-6 w-6" />}
-              title="No activity yet"
-              description="Your recent actions, such as recording a payment, will be listed here."
-            />
-          </Card>
+          <RecentActivityCard />
         </div>
       </div>
     </div>

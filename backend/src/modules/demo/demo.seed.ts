@@ -9,6 +9,7 @@ import { examsSeeder } from './seed/exams.seed';
 import { paymentsSeeder } from './seed/payments.seed';
 import { notesSeeder } from './seed/notes.seed';
 import { myNotesSeeder } from './seed/myNotes.seed';
+import { activitySeeder } from './seed/activity.seed';
 
 // ---------------------------------------------------------------------------
 // The demo template
@@ -47,6 +48,8 @@ const DEMO_SEEDERS: DemoSeeder[] = [
   paymentsSeeder,
   notesSeeder,
   myNotesSeeder,
+  // Last: built from what the seeders above created.
+  activitySeeder,
 ];
 
 // Fills one demo teacher's account with the template data.
