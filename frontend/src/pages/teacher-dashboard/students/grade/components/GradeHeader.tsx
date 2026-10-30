@@ -53,9 +53,7 @@ function GradeHeader({
             {grade.name}
           </h1>
           <p className="mt-1.5 text-[15px] text-ink-secondary">
-            {grade.monthlyFee != null
-              ? `${grade.monthlyFee.toLocaleString('en-GB')} EGP per month`
-              : 'Uses your default monthly fee'}
+            {`${grade.monthlyFee.toLocaleString('en-GB')} EGP per month`}
           </p>
         </div>
 

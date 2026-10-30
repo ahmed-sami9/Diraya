@@ -1,3 +1,4 @@
+import { currentMonthInCairo, todayInCairo } from '../../../utils/cairoDate';
 import { toAttendanceRate } from '../../attendance/attendance.rules';
 import { findSchedulesByGroups } from '../../groups/groups.repository';
 import { toSessions } from '../../groups/groups.service';
@@ -8,11 +9,17 @@ import {
   countAttendance,
   findAttendanceRecords,
   findNotes,
+  findStudentExams,
+  findStudentMarkAverage,
+  findStudentPaymentMonths,
   findStudentProfile,
   insertNote,
   studentExists,
   type AttendanceRow,
+  type MarkAverageRow,
   type NoteRow,
+  type StudentExamRow,
+  type StudentMonthRow,
 } from './students.profile.repository';
 import type { NoteInput } from './students.profile.validation';
 
@@ -21,12 +28,12 @@ import type { NoteInput } from './students.profile.validation';
 //
 //   - the student, grade and group     (students, grades, groups)
 //   - attendance                       (class_sessions, attendance_records)
+//   - marks                            (exams, exam_results)
+//   - fees                             (payments, student_months)
 //   - notes                            (student_notes)
 //
-// Exams and payments have no tables yet. Their lists are empty and their
-// summary numbers are null ("no data yet"), which is the truth: none have
-// been recorded. When those features are built, only their functions here
-// change; the API's shape stays the same.
+// Marks and fees reuse the exams and payments modules' own SQL (who is on an
+// exam, what is due and paid), so the profile can't disagree with those pages.
 //
 // The types are the API's answer, and must match the frontend's
 // (frontend/src/api/students/profile.ts) field for field.
@@ -44,11 +51,15 @@ export type AttendanceRecord = {
   reason: string | null;
 };
 
+// not-entered: the exam was held but no mark is saved yet (not "missed").
+export type ExamResultStatus = 'scored' | 'absent' | 'not-entered';
+
 export type ExamResult = {
   examId: string;
   title: string;
   kind: 'quiz' | 'exam';
   heldAt: string;
+  status: ExamResultStatus;
   score: number | null;
   maxScore: number;
 };
@@ -58,6 +69,8 @@ export type PaymentMonth = {
   amountDue: number;
   amountPaid: number;
   status: PaymentStatus;
+  // Why the month was skipped, when it was.
+  skipReason: string | null;
   lastPaidAt: string | null;
 };
 
@@ -100,6 +113,41 @@ function toAttendanceRecord(row: AttendanceRow): AttendanceRecord {
   };
 }
 
+function toExamResult(row: StudentExamRow): ExamResult {
+  return {
+    examId: row.exam_id,
+    title: row.title,
+    kind: row.kind,
+    heldAt: row.held_at.toISOString(),
+    status: row.status ?? 'not-entered',
+    score: row.score,
+    maxScore: row.max_mark,
+  };
+}
+
+function toPaymentMonth(row: StudentMonthRow): PaymentMonth {
+  return {
+    month: row.month,
+    amountDue: row.due,
+    amountPaid: row.paid,
+    status: row.status,
+    skipReason: row.skip_reason,
+    lastPaidAt: row.last_paid_at?.toISOString() ?? null,
+  };
+}
+
+// Whole percents. The change is worked out from the unrounded averages, and
+// only when both months have marks: one empty month says nothing.
+function toMarksSummary(row: MarkAverageRow): StudentProfile['summary']['marks'] {
+  const bothMonths = row.this_month !== null && row.last_month !== null;
+
+  return {
+    average: row.average === null ? null : Math.round(row.average),
+    examCount: row.exam_count,
+    changeSinceLastMonth: bothMonths ? Math.round(row.this_month! - row.last_month!) : null,
+  };
+}
+
 function toTeacherNote(row: NoteRow): TeacherNote {
   return { id: row.id, text: row.text, createdAt: row.created_at.toISOString() };
 }
@@ -115,8 +163,8 @@ async function assertStudentExists(teacherId: string, studentId: string): Promis
 
 // GET /teacher/students/:studentId
 //
-// The student first (it is also the ownership check), then the two
-// attendance reads at the same time: they don't depend on each other.
+// The student first (it is also the ownership check), then the rest at the
+// same time: they don't depend on each other.
 export async function getStudentProfile(
   teacherId: string,
   studentId: string
@@ -125,11 +173,16 @@ export async function getStudentProfile(
 
   if (!row) throw StudentErrors.notFound();
 
-  const [counts, [lastSession], slots] = await Promise.all([
+  const month = currentMonthInCairo();
+  const [counts, [lastSession], slots, marks, months] = await Promise.all([
     countAttendance(studentId),
     findAttendanceRecords(studentId, 1),
     findSchedulesByGroups(teacherId, [row.group_id]),
+    findStudentMarkAverage(studentId, month),
+    findStudentPaymentMonths(studentId, month),
   ]);
+  // From joining to now, so this month is always in the list.
+  const thisMonth = months.find((entry) => entry.month === month);
 
   return {
     id: row.id,
@@ -149,10 +202,8 @@ export async function getStudentProfile(
         attended: counts.attended,
         total: counts.total,
       },
-      // No exams table yet.
-      marks: { average: null, examCount: 0, changeSinceLastMonth: null },
-      // No payments table yet.
-      currentFee: null,
+      marks: toMarksSummary(marks),
+      currentFee: thisMonth ? toPaymentMonth(thisMonth) : null,
       lastSession: lastSession ? toAttendanceRecord(lastSession) : null,
     },
   };
@@ -171,29 +222,27 @@ export async function listStudentAttendance(
 }
 
 // GET /teacher/students/:studentId/exams
-//
-// No exams table yet: no exam has ever been recorded, so the list is empty.
-// Becomes a real query with the exams feature.
 export async function listStudentExams(
   teacherId: string,
   studentId: string
 ): Promise<ExamResult[]> {
   await assertStudentExists(teacherId, studentId);
 
-  return [];
+  const rows = await findStudentExams(studentId, todayInCairo());
+
+  return rows.map(toExamResult);
 }
 
 // GET /teacher/students/:studentId/payments
-//
-// No payments table yet: nothing has been paid or charged, so the list is
-// empty. Becomes a real query with the payments feature.
 export async function listStudentPayments(
   teacherId: string,
   studentId: string
 ): Promise<PaymentMonth[]> {
   await assertStudentExists(teacherId, studentId);
 
-  return [];
+  const rows = await findStudentPaymentMonths(studentId, currentMonthInCairo());
+
+  return rows.map(toPaymentMonth);
 }
 
 // GET /teacher/students/:studentId/notes

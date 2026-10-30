@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import type { GradeStudent, PaymentStatus } from '../../../../../api/students/students';
+import { PAYMENT_STATUS } from '../../profile/profileFormat';
 import ChevronRightIcon from '../../../../../components/icons/ChevronRightIcon';
 import { getInitials } from '../../../../../utils/initials';
 
@@ -30,12 +31,6 @@ const TONE_BAR: Record<Tone, string> = {
   good: 'bg-success',
   watch: 'bg-warning',
   low: 'bg-danger',
-};
-
-const PAYMENT: Record<PaymentStatus, { label: string; classes: string }> = {
-  paid: { label: 'Paid', classes: 'bg-success-tint text-success' },
-  partial: { label: 'Partly paid', classes: 'bg-warning-tint text-warning' },
-  unpaid: { label: 'Unpaid', classes: 'bg-danger-tint text-danger' },
 };
 
 // "No data yet": a dash for the eye, words for screen readers.
@@ -81,7 +76,7 @@ function MarkCell({ mark }: { mark: number | null }) {
 function PaymentBadge({ status }: { status: PaymentStatus | null }) {
   if (status === null) return <NoData />;
 
-  const { label, classes } = PAYMENT[status];
+  const { label, classes } = PAYMENT_STATUS[status];
 
   return (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${classes}`}>
@@ -104,15 +99,6 @@ function PaymentBadge({ status }: { status: PaymentStatus | null }) {
 // card on phones, where the group moves under the name and only the
 // summary values that exist are shown.
 function StudentsTable({ students, groupNames }: StudentsTableProps) {
-  // Until attendance, exams and payments are recorded, every value is empty.
-  // One sentence explains the dashes, instead of leaving them a mystery.
-  const hasNoSummaryYet = students.every(
-    (student) =>
-      student.attendanceRate === null &&
-      student.averageMark === null &&
-      student.paymentStatus === null
-  );
-
   return (
     <div>
       {/* Column titles: decorative (each row says what it is). Tablet and up.

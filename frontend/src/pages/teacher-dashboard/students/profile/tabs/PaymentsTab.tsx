@@ -10,15 +10,17 @@ import { formatMoney } from '../profileFormat';
 import type { ProfileOutletContext } from '../profileTypes';
 
 // /teacher/students/:studentId/payments — every month, newest first, plus a
-// total of what's still owed across all of them.
+// total of what's still owed. Months paid ahead aren't owed yet, the same
+// rule as the payments page.
 function PaymentsTab() {
   const { data, actions } = useOutletContext<ProfileOutletContext>();
   const { payments, profile } = data;
 
-  const owed = payments.reduce(
-    (total, month) => total + Math.max(month.amountDue - month.amountPaid, 0),
-    0
-  );
+  // The summary's fee row is this month (Egypt's calendar, from the server).
+  const thisMonth = profile.summary.currentFee?.month;
+  const owed = payments
+    .filter((month) => !thisMonth || month.month <= thisMonth)
+    .reduce((total, month) => total + Math.max(month.amountDue - month.amountPaid, 0), 0);
 
   return (
     <SectionCard

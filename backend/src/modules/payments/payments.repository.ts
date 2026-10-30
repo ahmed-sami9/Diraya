@@ -16,9 +16,10 @@ const toDate = (month: IsoMonth) => `${month}-01`;
 /* ------------------------ One student in one month ------------------------ */
 
 // The one place due / paid / left / status are worked out, so every read agrees.
+// Exported for the student profile and grade table, which must agree too.
 type StudentMonthsParts = { where: string; months: string; currentMonth: string };
 
-const studentMonthsSql = ({ where, months, currentMonth }: StudentMonthsParts) => `
+export const studentMonthsSql = ({ where, months, currentMonth }: StudentMonthsParts) => `
   SELECT
     s.id AS student_id,
     s.grade_id,
@@ -232,6 +233,33 @@ export async function findGradeOwed(
       HAVING SUM(sm.owed) > 0
     `,
     [teacherId, gradeId, toDate(upToMonth), toDate(currentMonth)]
+  );
+
+  return result.rows;
+}
+
+// Months older than the grid that each student still owes, oldest first.
+// The grid only shows five months; these let an old debt still be paid.
+export async function findGradeEarlierOwedMonths(
+  teacherId: string,
+  gradeId: string,
+  beforeMonth: IsoMonth,
+  currentMonth: IsoMonth
+): Promise<{ student_id: string; month: IsoMonth; left: number }[]> {
+  const result = await pool.query<{ student_id: string; month: IsoMonth; left: number }>(
+    `
+      SELECT sm.student_id::text AS student_id, to_char(sm.month, 'YYYY-MM') AS month, sm.owed AS left
+      FROM (
+        ${studentMonthsSql({
+          where: 's.teacher_id = $1 AND s.grade_id = $2',
+          months: `SELECT generate_series(j.joined_month, $3::date - interval '1 month', interval '1 month')::date`,
+          currentMonth: '$4::date',
+        })}
+      ) sm
+      WHERE sm.owed > 0
+      ORDER BY sm.student_id, sm.month
+    `,
+    [teacherId, gradeId, toDate(beforeMonth), toDate(currentMonth)]
   );
 
   return result.rows;
@@ -696,7 +724,8 @@ async function clearMonthField(
 }
 
 export type StudentMonthOutcome =
-  { status: 'saved'; gradeId: string } | { status: 'student-not-found' };
+  | { status: 'saved'; gradeId: string }
+  | { status: 'student-not-found' };
 
 export async function unskipMonth(
   teacherId: string,

@@ -4,6 +4,15 @@ import type { PaymentMonth } from '../profileTypes';
 // One row per month: what was paid, what's left, and a status badge. The
 // "left" amount is computed here (due - paid) rather than sent, so it can
 // never disagree with the two numbers it comes from.
+
+// The small line under the month.
+function detailOf(payment: PaymentMonth): string {
+  if (payment.status === 'skipped') return payment.skipReason ?? 'Skipped';
+  if (payment.status === 'not-due') return 'Nothing due';
+  if (payment.status === 'paid') return formatMoney(payment.amountPaid);
+  return `${formatMoney(payment.amountPaid)} of ${formatMoney(payment.amountDue)}`;
+}
+
 function PaymentList({ payments }: { payments: PaymentMonth[] }) {
   return (
     <ul aria-label="Monthly fees">
@@ -21,9 +30,7 @@ function PaymentList({ payments }: { payments: PaymentMonth[] }) {
                 {formatMonth(payment.month)}
               </span>
               <span className="text-xs text-ink-muted">
-                {payment.status === 'paid'
-                  ? formatMoney(payment.amountPaid)
-                  : `${formatMoney(payment.amountPaid)} of ${formatMoney(payment.amountDue)}`}
+                {detailOf(payment)}
                 {payment.lastPaidAt && ` · ${formatShortDate(payment.lastPaidAt)}`}
                 {left > 0 && (
                   <span className="font-semibold text-warning"> · {formatMoney(left)} left</span>

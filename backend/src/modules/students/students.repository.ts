@@ -1,5 +1,7 @@
 import { pool } from '../../config/db';
 import { logActivity } from '../activity/activity.repository';
+import { markAveragesSql } from '../exams/exams.repository';
+import { studentMonthsSql, type MonthStatus } from '../payments/payments.repository';
 
 export type StudentSearchRow = {
   id: string;
@@ -61,14 +63,24 @@ export type GradeStudentRow = {
   // The numbers behind the attendance rate (see attendance.rules.ts).
   attended: number;
   attendance_total: number;
+  // Unrounded %; null until they have a mark.
+  average_mark: number | null;
+  // This month's fee status, by the payments page's own rules.
+  payment_status: MonthStatus | null;
 };
 
 // Only the columns the grade table shows. Phones and notes stay out of this
 // list: they belong to the profile, and a list that never sends them can
 // never leak them.
+//
+// Marks and fees reuse the exams and payments SQL, so a row here always
+// matches the student's profile and the payments page. `onlyStudentId`
+// reads one row (a student just added) with the same rules.
 export async function findStudentsByGrade(
   teacherId: string,
-  gradeId: string
+  gradeId: string,
+  currentMonth: string,
+  onlyStudentId: string | null = null
 ): Promise<GradeStudentRow[]> {
   const result = await pool.query<GradeStudentRow>(
     `
@@ -79,7 +91,9 @@ export async function findStudentsByGrade(
         s.group_id::text AS group_id,
         s.created_at AS joined_at,
         COALESCE(a.attended, 0) AS attended,
-        COALESCE(a.total, 0) AS attendance_total
+        COALESCE(a.total, 0) AS attendance_total,
+        m.average AS average_mark,
+        f.status AS payment_status
       FROM students s
       -- Each student's counts in one pass over the grade's records, then
       -- joined by student. LEFT: students with no records keep 0 / 0.
@@ -92,10 +106,25 @@ export async function findStudentsByGrade(
         WHERE r.grade_id = $2
         GROUP BY r.student_id
       ) a ON a.student_id = s.id
+      LEFT JOIN (
+        ${markAveragesSql({
+          where:
+            'r.student_id IN (SELECT id FROM students WHERE teacher_id = $1 AND grade_id = $2)',
+          currentMonth: '$3::date',
+        })}
+      ) m ON m.student_id = s.id
+      LEFT JOIN (
+        ${studentMonthsSql({
+          where: 's.teacher_id = $1 AND s.grade_id = $2',
+          months: 'SELECT $3::date',
+          currentMonth: '$3::date',
+        })}
+      ) f ON f.student_id = s.id
       WHERE s.teacher_id = $1 AND s.grade_id = $2
+        AND ($4::bigint IS NULL OR s.id = $4)
       ORDER BY s.full_name, s.id
     `,
-    [teacherId, gradeId]
+    [teacherId, gradeId, `${currentMonth}-01`, onlyStudentId]
   );
 
   return result.rows;
@@ -185,7 +214,9 @@ export async function insertStudentWithCode(
           group_id::text AS group_id,
           created_at AS joined_at,
           0 AS attended,
-          0 AS attendance_total
+          0 AS attendance_total,
+          NULL::float8 AS average_mark,
+          NULL AS payment_status
       `,
       [
         teacherId,
@@ -244,4 +275,3 @@ export async function countStudents(
 
   return result.rows[0]!;
 }
-

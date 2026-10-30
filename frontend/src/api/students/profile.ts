@@ -19,8 +19,6 @@ import type { PaymentStatus } from './students';
 //   STUDENT_NOT_FOUND   404  no student with this id for this teacher
 //   INVALID_INPUT       400  the note failed validation
 //
-// The routes exist; their logic answers 501 until each feature is built.
-//
 // Conventions: ids are strings, dates ISO strings, a month is "YYYY-MM",
 // money is whole Egyptian pounds, lists are newest first, and null means
 // "no data yet" (never the same as 0).
@@ -59,7 +57,7 @@ export type StudentSummary = {
     // Points up or down since last month's average. null: not enough data.
     changeSinceLastMonth: number | null;
   };
-  // This month's fee. null: no fee is set up yet.
+  // This month's row of the payments list.
   currentFee: PaymentMonth | null;
   // The most recent session of their group. null: none held yet.
   lastSession: AttendanceRecord | null;
@@ -79,23 +77,32 @@ export type AttendanceRecord = {
   reason: string | null;
 };
 
+// The exams page's words: absent (they missed it) is not the same as
+// not-entered (held, but no mark saved yet).
+export type ExamResultStatus = 'scored' | 'absent' | 'not-entered';
+
+// An exam the student is on. Upcoming ones are left out until they have a result.
 export type ExamResult = {
   examId: string;
   title: string;
   kind: 'quiz' | 'exam';
   heldAt: string;
-  // null: they missed the exam (not the same as scoring 0).
+  status: ExamResultStatus;
+  // null unless status is 'scored' (not the same as scoring 0).
   score: number | null;
   maxScore: number;
 };
 
-// One month's fee, derived from the payments recorded for that month.
+// One month's fee, by the payments page's rules (discount, skips, voids).
+// Every month from joining to now, plus any month paid ahead.
 export type PaymentMonth = {
   month: string;
   amountDue: number;
   amountPaid: number;
   status: PaymentStatus;
-  // When the last payment for this month was recorded. null: nothing paid.
+  // Why the month was skipped. null unless status is 'skipped'.
+  skipReason: string | null;
+  // The day of the latest payment for this month. null: nothing paid.
   lastPaidAt: string | null;
 };
 

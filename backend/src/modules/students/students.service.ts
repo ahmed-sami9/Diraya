@@ -6,6 +6,7 @@ import { toAttendanceRate } from '../attendance/attendance.rules';
 import { GradeErrors } from '../grades/grades.errors';
 import { gradeExists } from '../grades/grades.repository';
 import { GroupErrors } from '../groups/groups.errors';
+import type { MonthStatus } from '../payments/payments.repository';
 
 import {
   countStudents,
@@ -44,7 +45,8 @@ export async function searchStudents(
 
 /* ------------------------- A grade's students ------------------------- */
 
-export type PaymentStatus = 'paid' | 'partial' | 'unpaid';
+// The payments page's own statuses, so both pages use the same words.
+export type PaymentStatus = MonthStatus;
 
 // What the API sends for each student in a grade. Matches GradeStudent on
 // the frontend.
@@ -65,9 +67,8 @@ export type GradeStudent = {
   paymentStatus: PaymentStatus | null;
 };
 
-// Attendance comes from the attendance tables. Exams and payments don't
-// have tables yet, so they are null ("no data yet"). The API shape is final:
-// when those features land, only this function and its query change.
+// The mark is rounded here, like the profile's average, so both show the
+// same whole percent.
 function toGradeStudent(row: GradeStudentRow): GradeStudent {
   return {
     id: row.id,
@@ -76,8 +77,8 @@ function toGradeStudent(row: GradeStudentRow): GradeStudent {
     groupId: row.group_id,
     joinedAt: row.joined_at.toISOString(),
     attendanceRate: toAttendanceRate(row.attended, row.attendance_total),
-    averageMark: null,
-    paymentStatus: null,
+    averageMark: row.average_mark === null ? null : Math.round(row.average_mark),
+    paymentStatus: row.payment_status,
   };
 }
 
@@ -89,7 +90,7 @@ export async function listGradeStudents(
   // "this grade doesn't exist" (404) are told apart.
   if (!(await gradeExists(teacherId, gradeId))) throw GradeErrors.notFound();
 
-  const rows = await findStudentsByGrade(teacherId, gradeId);
+  const rows = await findStudentsByGrade(teacherId, gradeId, currentMonthInCairo());
 
   return rows.map(toGradeStudent);
 }
@@ -114,7 +115,16 @@ export async function addStudent(
   if (result.status === 'grade-not-found') throw GradeErrors.notFound();
   if (result.status === 'group-not-found') throw GroupErrors.notFound();
 
-  return toGradeStudent(result.student);
+  // Read back with the table's own query, so the new row shows this month's
+  // fee like the others. The insert's row is the fallback.
+  const [row] = await findStudentsByGrade(
+    teacherId,
+    gradeId,
+    currentMonthInCairo(),
+    result.student.id
+  );
+
+  return toGradeStudent(row ?? result.student);
 }
 
 /* ------------------------------ Home summary ------------------------------ */
@@ -130,4 +140,3 @@ export async function getStudentCounts(teacherId: string): Promise<StudentCounts
 
   return { total: counts.total, joinedThisMonth: counts.joined_in_month };
 }
-

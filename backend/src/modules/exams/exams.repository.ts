@@ -25,7 +25,8 @@ export type ResultStatus = 'scored' | 'absent';
 //   - plus anyone with a result (a result is a fact, whatever the dates say)
 //
 // It expects the exam's row to be called `e`. UNION removes duplicates.
-const EXAM_ROSTER = `
+// The student profile uses it too, so "on the exam" means one thing.
+export const EXAM_ROSTER = `
   SELECT s.id AS student_id
   FROM students s
   WHERE s.grade_id = e.grade_id
@@ -34,6 +35,39 @@ const EXAM_ROSTER = `
   SELECT r.student_id
   FROM exam_results r
   WHERE r.exam_id = e.id
+`;
+
+/* ------------------------------ Average marks ----------------------------- */
+
+// Each student's average mark, as the mean of their exam percentages. Only
+// real marks count: absent and not-entered stay out. Shared by the grade
+// table and the student profile, so both show the same number.
+//
+//   average     every exam they have a mark in
+//   this_month  exams held in currentMonth (null when none)
+//   last_month  exams held the month before (null when none)
+//
+// `where` filters exam_results (alias r); currentMonth is a date SQL
+// expression for the 1st of the month.
+export const markAveragesSql = ({
+  where,
+  currentMonth,
+}: {
+  where: string;
+  currentMonth: string;
+}) => `
+  SELECT
+    r.student_id,
+    COUNT(*)::int AS exam_count,
+    AVG(r.score * 100 / r.max_mark)::float8 AS average,
+    (AVG(r.score * 100 / r.max_mark)
+      FILTER (WHERE date_trunc('month', e.held_on) = ${currentMonth}))::float8 AS this_month,
+    (AVG(r.score * 100 / r.max_mark)
+      FILTER (WHERE date_trunc('month', e.held_on) = ${currentMonth} - interval '1 month'))::float8 AS last_month
+  FROM exam_results r
+  JOIN exams e ON e.id = r.exam_id
+  WHERE r.status = 'scored' AND ${where}
+  GROUP BY r.student_id
 `;
 
 // The exam's own columns, shaped the same way everywhere.
@@ -404,8 +438,12 @@ export async function saveResults(
 
     const toWrite = results.filter((item) => item.status !== 'not-entered');
 
+    // How many students got their first result in this save (xmax = 0: a new row,
+    // not an update). Corrections alone don't count as "entering marks".
+    let newResults = 0;
+
     if (toWrite.length > 0) {
-      await client.query(
+      const written = await client.query<{ inserted: boolean }>(
         `
           INSERT INTO exam_results (exam_id, student_id, grade_id, max_mark, status, score)
           SELECT $1, x.student_id, $2, $3, x.status, x.score
@@ -414,6 +452,7 @@ export async function saveResults(
           SET status = EXCLUDED.status,
               score = EXCLUDED.score,
               entered_at = CURRENT_TIMESTAMP
+          RETURNING (xmax = 0) AS inserted
         `,
         [
           examId,
@@ -424,6 +463,7 @@ export async function saveResults(
           toWrite.map((item) => (item.status === 'scored' ? item.score : null)),
         ]
       );
+      newResults = written.rows.filter((result) => result.inserted).length;
     }
 
     const toClear = results
@@ -437,10 +477,10 @@ export async function saveResults(
       );
     }
 
-    // Recent activity when marks were written (only clearing boxes isn't
-    // "entering marks"): how many of the exam's students now have a result,
-    // counted with the same roster as the exams list.
-    if (toWrite.length > 0) {
+    // Recent activity when new marks were entered (like attendance, fixing a
+    // mark later adds no entry): how many of the exam's students now have a
+    // result, counted with the same roster as the exams list.
+    if (newResults > 0) {
       const counts = await client.query<{ entered: number; total: number }>(
         `
           SELECT

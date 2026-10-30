@@ -1,4 +1,5 @@
 import { apiRequest } from '../apiClient';
+import type { MonthStatus } from '../payments/payments';
 
 // Students: the navbar search, and the students of one grade.
 //
@@ -42,8 +43,9 @@ export async function searchStudents(
   return data.students;
 }
 
-// This month's fee: paid in full, paid part of it, or nothing yet.
-export type PaymentStatus = 'paid' | 'partial' | 'unpaid';
+// A month's fee, in the payments page's own words (paid, partly, unpaid,
+// skipped, not-due), so the two pages never name a state differently.
+export type PaymentStatus = MonthStatus;
 
 // One row of a grade's student table. Only what the table shows: everything
 // else (phones, notes, full history) lives on the student's profile.

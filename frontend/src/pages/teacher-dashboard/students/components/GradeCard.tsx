@@ -20,7 +20,7 @@ interface GradeCardProps {
 //   green = healthy attendance, amber = low attendance
 //   grey  = nothing yet
 const chipTones = {
-  upcoming: 'bg-info-tint text-info',
+  upcoming: 'bg-primary-tint text-primary',
   good: 'bg-success-tint text-success',
   low: 'bg-warning-tint text-warning',
   none: 'bg-surface-hover text-ink-muted',

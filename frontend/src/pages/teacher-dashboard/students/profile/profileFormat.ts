@@ -1,15 +1,21 @@
 import type { PaymentStatus } from '../../../../api/students/students';
+import { STATUS_STYLE } from '../../payment/paymentsHelpers';
 
 import type { AttendanceRecord } from './profileTypes';
 
 // Display rules shared by the profile's sections: how a date, a month, a
 // rate or a status looks. One place, so every section says it the same way.
 
-const shortDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+const shortDate = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'Africa/Cairo',
+});
 const longDate = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
+  timeZone: 'Africa/Cairo',
 });
 const monthYear = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' });
 const monthOnly = new Intl.DateTimeFormat('en-GB', { month: 'long' });
@@ -58,11 +64,13 @@ export const TONE_BAR: Record<Tone, string> = {
 // attendance page, so it lives in utils/ and is re-exported here.
 export { ATTENDANCE_STATUS } from '../../../../utils/attendanceStatus';
 
-export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; classes: string }> = {
-  paid: { label: 'Paid', classes: 'bg-success-tint text-success' },
-  partial: { label: 'Partly paid', classes: 'bg-warning-tint text-warning' },
-  unpaid: { label: 'Unpaid', classes: 'bg-danger-tint text-danger' },
-};
+// The payments page's labels and colours, so a status looks the same everywhere.
+export const PAYMENT_STATUS = Object.fromEntries(
+  Object.entries(STATUS_STYLE).map(([status, style]) => [
+    status,
+    { label: style.label, classes: style.pill },
+  ])
+) as Record<PaymentStatus, { label: string; classes: string }>;
 
 /* ------------------------------- Grouping -------------------------------- */
 

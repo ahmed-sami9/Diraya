@@ -1,4 +1,6 @@
 import { pool } from '../../../config/db';
+import { EXAM_ROSTER, markAveragesSql } from '../../exams/exams.repository';
+import { studentMonthsSql, type MonthStatus } from '../../payments/payments.repository';
 
 // SQL for one student's profile. Every entry point is protected by
 // teacher_id: either the query filters by it directly, or the service calls
@@ -130,6 +132,139 @@ export async function countAttendance(studentId: string): Promise<AttendanceCoun
 
   // An aggregate without GROUP BY always returns exactly one row.
   return result.rows[0]!;
+}
+
+/* ---------------------------------- Exams --------------------------------- */
+
+export type StudentExamRow = {
+  exam_id: string;
+  title: string;
+  kind: 'quiz' | 'exam';
+  held_at: Date;
+  max_mark: number;
+  // null: no row yet, "not entered".
+  status: 'scored' | 'absent' | null;
+  score: number | null;
+};
+
+// Every exam this student is on (the exams page's own roster), newest first.
+// An exam still to come is left out until it has a result: nothing to show yet.
+// held_at: the exam day at noon in Egypt, like attendance.
+export async function findStudentExams(
+  studentId: string,
+  today: string
+): Promise<StudentExamRow[]> {
+  const result = await pool.query<StudentExamRow>(
+    `
+      SELECT
+        e.id::text AS exam_id,
+        e.title,
+        e.kind,
+        (e.held_on + TIME '12:00') AT TIME ZONE 'Africa/Cairo' AS held_at,
+        e.max_mark,
+        r.status,
+        r.score::float8 AS score
+      FROM students s
+      JOIN exams e ON e.teacher_id = s.teacher_id
+      LEFT JOIN exam_results r ON r.exam_id = e.id AND r.student_id = s.id
+      WHERE s.id = $1
+        AND EXISTS (SELECT 1 FROM (${EXAM_ROSTER}) roster WHERE roster.student_id = s.id)
+        AND (r.exam_id IS NOT NULL OR e.held_on <= $2::date)
+      ORDER BY e.held_on DESC, e.id DESC
+    `,
+    [studentId, today]
+  );
+
+  return result.rows;
+}
+
+export type MarkAverageRow = {
+  exam_count: number;
+  average: number | null;
+  this_month: number | null;
+  last_month: number | null;
+};
+
+// The marks tile. Always one row: no marks yet is a count of 0.
+export async function findStudentMarkAverage(
+  studentId: string,
+  currentMonth: string
+): Promise<MarkAverageRow> {
+  const result = await pool.query<MarkAverageRow>(
+    `
+      SELECT
+        COALESCE(m.exam_count, 0) AS exam_count,
+        m.average,
+        m.this_month,
+        m.last_month
+      FROM (SELECT 1) one
+      LEFT JOIN (${markAveragesSql({ where: 'r.student_id = $1', currentMonth: '$2::date' })}) m ON TRUE
+    `,
+    [studentId, `${currentMonth}-01`]
+  );
+
+  return result.rows[0]!;
+}
+
+/* -------------------------------- Payments -------------------------------- */
+
+export type StudentMonthRow = {
+  month: string;
+  due: number;
+  paid: number;
+  status: MonthStatus;
+  skip_reason: string | null;
+  last_paid_at: Date | null;
+};
+
+// Every month from joining to now, newest first, with the payments page's own
+// rules (studentMonthsSql). Months paid ahead are added on top.
+// last_paid_at: the latest payment for that month that wasn't voided, at noon in Egypt.
+export async function findStudentPaymentMonths(
+  studentId: string,
+  currentMonth: string
+): Promise<StudentMonthRow[]> {
+  const result = await pool.query<StudentMonthRow>(
+    `
+      SELECT
+        to_char(sm.month, 'YYYY-MM') AS month,
+        sm.due,
+        sm.paid,
+        sm.status,
+        sm.skip_reason,
+        (last.paid_on + TIME '12:00') AT TIME ZONE 'Africa/Cairo' AS last_paid_at
+      FROM (
+        ${studentMonthsSql({
+          where: 's.id = $1',
+          // GREATEST skips the NULL when nothing is paid ahead.
+          months: `
+            SELECT generate_series(
+              j.joined_month,
+              GREATEST(
+                $2::date,
+                (SELECT MAX(pm.month)
+                 FROM payment_months pm
+                 JOIN payments pay ON pay.id = pm.payment_id
+                 WHERE pay.student_id = s.id AND pay.voided_at IS NULL)
+              ),
+              interval '1 month'
+            )::date
+          `,
+          currentMonth: '$2::date',
+        })}
+      ) sm
+      LEFT JOIN LATERAL (
+        SELECT MAX(pay.paid_on) AS paid_on
+        FROM payment_months pm
+        JOIN payments pay ON pay.id = pm.payment_id
+        WHERE pay.student_id = sm.student_id AND pm.month = sm.month AND pay.voided_at IS NULL
+      ) last ON TRUE
+      ORDER BY sm.month DESC
+    `,
+    [studentId, `${currentMonth}-01`]
+  );
+
+  return result.rows;
 }
 
 /* ---------------------------------- Notes --------------------------------- */

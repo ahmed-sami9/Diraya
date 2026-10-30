@@ -41,7 +41,9 @@ function ExamList({ exams }: { exams: ExamResult[] }) {
 
             <span className="text-right text-sm tabular-nums">
               {percent === null ? (
-                <span className="font-semibold text-ink-muted">Missed</span>
+                <span className="font-semibold text-ink-muted">
+                  {exam.status === 'absent' ? 'Absent' : 'No mark yet'}
+                </span>
               ) : (
                 <>
                   <strong className={TONE_TEXT[toneOf(percent)]}>{percent}%</strong>{' '}
