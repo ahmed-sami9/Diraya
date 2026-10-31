@@ -109,7 +109,10 @@ function ProfileHeader({ profile, actions }: ProfileHeaderProps) {
             label={`More options for ${name}`}
             trigger={<MoreHorizontalIcon className="h-[18px] w-[18px]" />}
             buttonClassName="h-11 w-11 rounded-[10px] border border-border bg-surface text-ink-secondary hover:bg-surface-hover"
-            items={[{ label: 'Move to another group', onSelect: actions.moveToGroup }]}
+            items={[
+              { label: 'Download PDF report', onSelect: actions.downloadReport },
+              { label: 'Move to another group', onSelect: actions.moveToGroup },
+            ]}
           />
         </div>
       </div>

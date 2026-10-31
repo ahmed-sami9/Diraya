@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
 
 import ChevronRightIcon from '../../../../components/icons/ChevronRightIcon';
@@ -6,10 +6,13 @@ import SectionError from '../../../../components/SectionError';
 import { useAuth } from '../../../../context/AuthContext';
 import { useDelayedFlag } from '../../../../hooks/useDelayedFlag';
 import { useStudentProfile } from '../../../../hooks/students/useStudentProfile';
+import { todayInCairo } from '../../../../utils/cairoDate';
 
 import ProfileHeader from './components/ProfileHeader';
 import ProfileTabs from './components/ProfileTabs';
 import SummaryTiles from './components/SummaryTiles';
+import { downloadStudentReport } from './report/downloadReport';
+import { buildStudentReport } from './report/reportData';
 import ShareWithParentDialog from './share/ShareWithParentDialog';
 import type { ProfileActions, ProfileOutletContext } from './profileTypes';
 
@@ -32,6 +35,33 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
   const { state, reload, addNote } = useStudentProfile(studentId);
   const { user } = useAuth();
   const [isSharing, setIsSharing] = useState(false);
+  const [reportStatus, setReportStatus] = useState<'idle' | 'working' | 'failed'>('idle');
+
+  // A failure message clears itself; the saved file is its own success message.
+  useEffect(() => {
+    if (reportStatus !== 'failed') return;
+    const timer = setTimeout(() => setReportStatus('idle'), 6000);
+    return () => clearTimeout(timer);
+  }, [reportStatus]);
+
+  const downloadReport = async () => {
+    if (state.status !== 'ready' || !user || reportStatus === 'working') return;
+
+    setReportStatus('working');
+    try {
+      // Named fields, not the whole page data: notes must never reach the PDF.
+      const { profile, attendance, exams, payments } = state.data;
+      const report = buildStudentReport(
+        { profile, attendance, exams, payments },
+        { teacherName: user.name, currentMonth: todayInCairo().slice(0, 7) }
+      );
+      await downloadStudentReport(report);
+      setReportStatus('idle');
+    } catch (error) {
+      console.error(error);
+      setReportStatus('failed');
+    }
+  };
 
   // What each button does. Notes and Retry go to the server (through the
   // hook), Share opens its dialog; the rest open dialogs that aren't built yet.
@@ -41,6 +71,7 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
     // TODO(dialog): Edit student (PATCH /teacher/students/:studentId)
     editStudent: () => console.info('TODO: open the Edit student dialog'),
     shareWithParent: () => setIsSharing(true),
+    downloadReport,
     // TODO(dialog): Move to group (PATCH /teacher/students/:studentId { groupId })
     moveToGroup: () => console.info('TODO: open the Move to group dialog'),
     // TODO(dialog): Record payment (POST /teacher/students/:studentId/payments)
@@ -140,8 +171,22 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
               profile={state.data.profile}
               teacherName={user.name}
               onClose={() => setIsSharing(false)}
+              onDownloadReport={downloadReport}
             />
           )}
+
+          {/* Always mounted, so screen readers announce what appears in it. */}
+          <p
+            role="status"
+            className={
+              reportStatus === 'idle'
+                ? 'sr-only'
+                : 'fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-page shadow-lg'
+            }
+          >
+            {reportStatus === 'working' && 'Preparing the PDF report…'}
+            {reportStatus === 'failed' && 'Couldn’t create the PDF report. Please try again.'}
+          </p>
         </>
       )}
     </div>

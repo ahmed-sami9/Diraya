@@ -13,6 +13,8 @@ interface ShareWithParentDialogProps {
   profile: StudentProfile;
   teacherName: string;
   onClose: () => void;
+  // The PDF instead: for a teacher who prefers a file, or when WhatsApp won't open.
+  onDownloadReport: () => void;
 }
 
 type Status = 'idle' | 'opened' | 'copied' | 'copy-failed';
@@ -21,7 +23,12 @@ type Status = 'idle' | 'opened' | 'copied' | 'copy-failed';
 //
 // The teacher presses Send in WhatsApp, not here: the app never learns
 // whether it was sent, so the status only says what really happened.
-function ShareWithParentDialog({ profile, teacherName, onClose }: ShareWithParentDialogProps) {
+function ShareWithParentDialog({
+  profile,
+  teacherName,
+  onClose,
+  onDownloadReport,
+}: ShareWithParentDialogProps) {
   const [text, setText] = useState(() => buildParentMessage(profile, teacherName));
   const [status, setStatus] = useState<Status>('idle');
   // Once per dialog: a device doesn't change while it's open.
@@ -149,6 +156,17 @@ function ShareWithParentDialog({ profile, teacherName, onClose }: ShareWithParen
             </a>
           )}
         </div>
+
+        <p className="border-t border-border pt-4 text-center text-sm text-ink-secondary">
+          Prefer a file?{' '}
+          <button
+            type="button"
+            onClick={onDownloadReport}
+            className="cursor-pointer rounded font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            Download PDF report
+          </button>
+        </p>
       </div>
     </DialogShell>
   );
