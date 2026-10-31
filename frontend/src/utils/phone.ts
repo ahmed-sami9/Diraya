@@ -22,6 +22,24 @@ export function normalizePhone(input: string): string {
 
 export const isValidEgyptMobile = (normalized: string) => EGYPT_MOBILE.test(normalized);
 
+// "01012345678" -> "201012345678": tel: and WhatsApp links want the country
+// code instead of the leading 0.
+export const toInternational = (normalized: string) => `20${normalized.slice(1)}`;
+
+// A WhatsApp chat with this number, `text` already typed. Phones open the app
+// (wa.me); computers go straight to WhatsApp Web, skipping wa.me's extra page.
+export function whatsappChatUrl(
+  normalized: string,
+  { text, onPhone }: { text?: string; onPhone: boolean }
+): string {
+  const number = toInternational(normalized);
+  const message = text ? encodeURIComponent(text) : '';
+
+  if (onPhone) return `https://wa.me/${number}${message && `?text=${message}`}`;
+
+  return `https://web.whatsapp.com/send?phone=${number}${message && `&text=${message}`}`;
+}
+
 // "01012345678" -> "010 1234 5678", easier to read and to check by eye.
 export function formatPhone(normalized: string): string {
   if (normalized.length !== 11) return normalized;

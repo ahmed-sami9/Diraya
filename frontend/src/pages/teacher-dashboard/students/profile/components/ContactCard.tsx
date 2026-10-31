@@ -1,4 +1,6 @@
-import { formatPhone } from '../../../../../utils/phone';
+import MessageIcon from '../../../../../components/icons/MessageIcon';
+import { isMobileDevice } from '../../../../../utils/device';
+import { formatPhone, toInternational, whatsappChatUrl } from '../../../../../utils/phone';
 
 interface ContactCardProps {
   label: string;
@@ -8,10 +10,6 @@ interface ContactCardProps {
   whoLabel: string;
 }
 
-// "01012345678" -> "+201012345678" (tel: links) / "201012345678" (WhatsApp).
-// Both want the country code instead of the leading 0.
-const toInternational = (phone: string) => `20${phone.slice(1)}`;
-
 const iconLink = `
   flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px]
   border border-border bg-surface text-primary
@@ -19,7 +17,7 @@ const iconLink = `
   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
 `;
 
-// A phone number with one-tap Call and WhatsApp. Plain links (tel:, wa.me),
+// A phone number with one-tap Call and WhatsApp. Plain links (tel:, WhatsApp),
 // not API calls: the phone or computer opens the right app by itself.
 function ContactCard({ label, phone, whoLabel }: ContactCardProps) {
   const hasPhone = phone.length > 0;
@@ -56,24 +54,13 @@ function ContactCard({ label, phone, whoLabel }: ContactCardProps) {
             </svg>
           </a>
           <a
-            href={`https://wa.me/${toInternational(phone)}`}
+            href={whatsappChatUrl(phone, { onPhone: isMobileDevice() })}
             target="_blank"
             rel="noreferrer"
             aria-label={`Message ${whoLabel} on WhatsApp`}
             className={iconLink}
           >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-[18px] w-[18px]"
-            >
-              <path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.5A8.5 8.5 0 1 1 21 11.5Z" />
-            </svg>
+            <MessageIcon className="h-[18px] w-[18px]" />
           </a>
         </>
       )}

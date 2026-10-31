@@ -1,14 +1,16 @@
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
 
 import ChevronRightIcon from '../../../../components/icons/ChevronRightIcon';
 import SectionError from '../../../../components/SectionError';
+import { useAuth } from '../../../../context/AuthContext';
 import { useDelayedFlag } from '../../../../hooks/useDelayedFlag';
 import { useStudentProfile } from '../../../../hooks/students/useStudentProfile';
 
 import ProfileHeader from './components/ProfileHeader';
 import ProfileTabs from './components/ProfileTabs';
 import SummaryTiles from './components/SummaryTiles';
+import ShareWithParentDialog from './share/ShareWithParentDialog';
 import type { ProfileActions, ProfileOutletContext } from './profileTypes';
 
 // The route: /teacher/students/:studentId and its tabs.
@@ -28,16 +30,17 @@ function StudentProfileLayout() {
 
 function StudentProfileContent({ studentId }: { studentId: string }) {
   const { state, reload, addNote } = useStudentProfile(studentId);
+  const { user } = useAuth();
+  const [isSharing, setIsSharing] = useState(false);
 
   // What each button does. Notes and Retry go to the server (through the
-  // hook); the rest open dialogs that aren't built yet.
+  // hook), Share opens its dialog; the rest open dialogs that aren't built yet.
   const actions: ProfileActions = {
     addNote,
     retry: reload,
     // TODO(dialog): Edit student (PATCH /teacher/students/:studentId)
     editStudent: () => console.info('TODO: open the Edit student dialog'),
-    // TODO(api): create the parent link (POST /teacher/students/:studentId/share)
-    shareWithParent: () => console.info('TODO: create the parent link'),
+    shareWithParent: () => setIsSharing(true),
     // TODO(dialog): Move to group (PATCH /teacher/students/:studentId { groupId })
     moveToGroup: () => console.info('TODO: open the Move to group dialog'),
     // TODO(dialog): Record payment (POST /teacher/students/:studentId/payments)
@@ -130,6 +133,15 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
           <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-surface" />}>
             <Outlet context={{ data: state.data, actions } satisfies ProfileOutletContext} />
           </Suspense>
+
+          {/* Always signed in here (a protected route); the check is for TypeScript. */}
+          {isSharing && user && (
+            <ShareWithParentDialog
+              profile={state.data.profile}
+              teacherName={user.name}
+              onClose={() => setIsSharing(false)}
+            />
+          )}
         </>
       )}
     </div>
