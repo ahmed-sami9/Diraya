@@ -12,6 +12,7 @@ import { getStudentProfile, type StudentProfile } from './profile/students.profi
 import { StudentErrors } from './students.errors';
 import {
   countStudents,
+  deleteStudent,
   findStudentsByGrade,
   insertStudentWithCode,
   searchStudentsByName,
@@ -153,6 +154,22 @@ export async function editStudent(
   if (outcome === 'group-not-found') throw GroupErrors.notFound();
 
   return getStudentProfile(teacherId, studentId);
+}
+
+// DELETE /teacher/students/:studentId[?withPayments=true]
+//
+// Answers with the grade, so the page knows where to go back to.
+export async function removeStudent(
+  teacherId: string,
+  studentId: string,
+  withPayments: boolean
+): Promise<{ gradeId: string }> {
+  const outcome = await deleteStudent(teacherId, studentId, { withPayments });
+
+  if (outcome.status === 'not-found') throw StudentErrors.notFound();
+  if (outcome.status === 'has-payments') throw StudentErrors.hasPayments();
+
+  return { gradeId: outcome.gradeId };
 }
 
 /* ------------------------------ Home summary ------------------------------ */

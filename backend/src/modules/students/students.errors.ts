@@ -6,4 +6,11 @@ export const StudentErrors = {
   // Also used when the student belongs to another teacher: never confirm
   // that someone else's id exists.
   notFound: () => new AppError(404, 'STUDENT_NOT_FOUND', 'This student no longer exists.'),
+  // Deleting would also delete payments, and the request didn't say it may.
+  hasPayments: () =>
+    new AppError(
+      409,
+      'STUDENT_HAS_PAYMENTS',
+      'This student has payments recorded. Confirm that their payments should be deleted too.'
+    ),
 };

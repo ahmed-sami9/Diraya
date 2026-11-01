@@ -43,6 +43,25 @@ describe('describeActivity: one sentence per type', () => {
     assert.equal(described.kind, 'payment');
   });
 
+  it('student.deleted: no link, and the money that went with them', () => {
+    const withPayments = describeActivity(
+      entry('student.deleted', { studentName: 'Omar Adel', gradeName: 'Grade 1', paidTotal: 1050 })
+    );
+
+    assert.deepEqual(withPayments, {
+      kind: 'removed',
+      title: 'Deleted a student',
+      detail: 'Omar Adel · Grade 1 · EGP 1,050 in payments deleted',
+      to: null,
+    });
+    assert.equal(
+      describeActivity(
+        entry('student.deleted', { studentName: 'Omar Adel', gradeName: 'Grade 1', paidTotal: 0 })
+      ).detail,
+      'Omar Adel · Grade 1'
+    );
+  });
+
   it('payment.voided: with the reason', () => {
     assert.equal(
       describeActivity(
@@ -75,10 +94,21 @@ describe('describeActivity: one sentence per type', () => {
 
   it('exam.added and marks.entered: link to the exam', () => {
     const exam = describeActivity(
-      entry('exam.added', { examId: '9', title: 'Unit 3 test', gradeName: 'Grade 3', heldOn: '2026-11-02' })
+      entry('exam.added', {
+        examId: '9',
+        title: 'Unit 3 test',
+        gradeName: 'Grade 3',
+        heldOn: '2026-11-02',
+      })
     );
     const marks = describeActivity(
-      entry('marks.entered', { examId: '9', title: 'Quiz 4', gradeName: 'Grade 1', entered: 8, total: 10 })
+      entry('marks.entered', {
+        examId: '9',
+        title: 'Quiz 4',
+        gradeName: 'Grade 1',
+        entered: 8,
+        total: 10,
+      })
     );
 
     assert.equal(exam.detail, 'Unit 3 test · Grade 3 · Mon 2 Nov');

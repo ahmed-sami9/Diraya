@@ -8,6 +8,7 @@ import CalendarIcon from '../../../../components/icons/CalendarIcon';
 import ExamsIcon from '../../../../components/icons/ExamsIcon';
 import PaymentsIcon from '../../../../components/icons/PaymentsIcon';
 import PencilIcon from '../../../../components/icons/PencilIcon';
+import TrashIcon from '../../../../components/icons/TrashIcon';
 import UserPlusIcon from '../../../../components/icons/UserPlusIcon';
 import { useActivity } from '../../../../hooks/activity/useActivity';
 import { describeActivity, timeAgo, type ActivityKind } from '../../../../utils/activity';
@@ -15,8 +16,12 @@ import { describeActivity, timeAgo, type ActivityKind } from '../../../../utils/
 // A side-column card: enough to see what happened lately.
 const SHOWN = 6;
 
-const KIND_STYLE: Record<ActivityKind, { icon: ComponentType<{ className?: string }>; tone: string }> = {
+const KIND_STYLE: Record<
+  ActivityKind,
+  { icon: ComponentType<{ className?: string }>; tone: string }
+> = {
   student: { icon: UserPlusIcon, tone: 'bg-primary-tint text-primary' },
+  removed: { icon: TrashIcon, tone: 'bg-danger-tint text-danger' },
   payment: { icon: PaymentsIcon, tone: 'bg-success-tint text-success' },
   void: { icon: PaymentsIcon, tone: 'bg-danger-tint text-danger' },
   attendance: { icon: CalendarIcon, tone: 'bg-primary-tint text-primary' },
@@ -36,16 +41,25 @@ function RecentActivityCard() {
   return (
     <Card title="Recent activity">
       {state.status === 'loading' ? (
-        <ul aria-hidden="true" className="divide-y divide-border">
+        <ul
+          aria-hidden="true"
+          className="divide-y divide-border"
+        >
           {[0, 1, 2].map((row) => (
-            <li key={row} className="flex items-center gap-3 px-5 py-3.5">
+            <li
+              key={row}
+              className="flex items-center gap-3 px-5 py-3.5"
+            >
               <span className="h-9 w-9 animate-pulse rounded-full bg-surface-hover" />
               <span className="h-4 flex-1 animate-pulse rounded bg-surface-hover" />
             </li>
           ))}
         </ul>
       ) : state.status === 'error' ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 px-5 py-5">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 px-5 py-5"
+        >
           <p className="text-sm text-ink-secondary">We couldn’t load your activity.</p>
           <button
             type="button"

@@ -10,6 +10,8 @@ import { apiRequest } from '../apiClient';
 
 export type ActivityDetails = {
   'student.added': { studentId: string; studentName: string; gradeName: string; groupName: string };
+  // No id: the student is gone. paidTotal: their deleted payments, added up.
+  'student.deleted': { studentName: string; gradeName: string; paidTotal: number };
   'payment.recorded': { studentId: string; studentName: string; amount: number; months: string[] };
   'payment.voided': { studentId: string; studentName: string; amount: number; reason: string };
   'attendance.taken': {

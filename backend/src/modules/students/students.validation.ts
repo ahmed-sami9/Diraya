@@ -48,6 +48,20 @@ export type StudentInput = z.infer<typeof studentInputSchema>;
 
 export const validateStudentInput = validateBody(studentInputSchema, 'Invalid student data');
 
+/* ---------------------------- Delete a student ---------------------------- */
+
+// ?withPayments=true: the teacher saw the payment warning and agreed.
+export const deleteStudentQuerySchema = z.object({
+  withPayments: z.enum(['true']).optional(),
+});
+
+export type DeleteStudentQuery = z.infer<typeof deleteStudentQuerySchema>;
+
+export const validateDeleteStudentQuery = validateQuery(
+  deleteStudentQuerySchema,
+  'Invalid request'
+);
+
 /* ----------------------------- Edit a student ----------------------------- */
 
 // The same rules as adding, minus the note (notes live on the profile).

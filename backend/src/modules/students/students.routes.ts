@@ -1,12 +1,14 @@
 import { Router } from 'express';
 
 import {
+  deleteStudentRoute,
   getGradeStudents,
   getStudentSearch,
   patchStudent,
   postStudent,
 } from './students.controller';
 import {
+  validateDeleteStudentQuery,
   validateStudentDetails,
   validateStudentInput,
   validateStudentSearch,
@@ -19,6 +21,7 @@ import { validateStudentId } from './profile/students.profile.validation';
 //   Inside a grade:  GET, POST /teacher/grades/:gradeId/students -> gradeStudentsRouter
 //   On their own:    GET /teacher/students/search                -> default router
 //                    PATCH /teacher/students/:studentId           -> edit their details
+//                    DELETE /teacher/students/:studentId          -> delete them
 //                    /teacher/students/:studentId/...            -> studentProfileRouter
 
 // mergeParams: lets this router read :gradeId from grades.routes.ts.
@@ -38,6 +41,7 @@ router.get('/search', validateStudentSearch, getStudentSearch);
 // One student's profile and its tabs. The id is checked once here, for every
 // route below it (the same pattern as grades.routes.ts).
 router.patch('/:studentId', validateStudentId, validateStudentDetails, patchStudent);
+router.delete('/:studentId', validateStudentId, validateDeleteStudentQuery, deleteStudentRoute);
 
 router.use('/:studentId', validateStudentId, studentProfileRouter);
 

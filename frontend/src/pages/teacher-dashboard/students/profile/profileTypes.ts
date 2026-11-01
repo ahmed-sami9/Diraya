@@ -23,6 +23,8 @@ export type {
 // names; the layout decides what each one does (a request, a dialog...).
 export type ProfileActions = {
   editStudent: () => void;
+  // Opens the confirmation; the dialog does the deleting.
+  deleteStudent: () => void;
   shareWithParent: () => void;
   // Builds the 3-month PDF report and saves it.
   downloadReport: () => void;

@@ -1,13 +1,15 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Link, Outlet, useParams } from 'react-router-dom';
+import { Link, Outlet, useNavigate, useParams } from 'react-router-dom';
 
 import ChevronRightIcon from '../../../../components/icons/ChevronRightIcon';
 import SectionError from '../../../../components/SectionError';
 import { useAuth } from '../../../../context/AuthContext';
 import { useDelayedFlag } from '../../../../hooks/useDelayedFlag';
+import { deleteStudent } from '../../../../api/students/profile';
 import { useStudentProfile } from '../../../../hooks/students/useStudentProfile';
 import { todayInCairo } from '../../../../utils/cairoDate';
 
+import DeleteStudentDialog from './components/DeleteStudentDialog';
 import EditStudentDialog from './components/EditStudentDialog';
 import ProfileHeader from './components/ProfileHeader';
 import ProfileTabs from './components/ProfileTabs';
@@ -37,6 +39,8 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
   const { user } = useAuth();
   const [isSharing, setIsSharing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const navigate = useNavigate();
   const [reportStatus, setReportStatus] = useState<'idle' | 'working' | 'failed'>('idle');
 
   // A failure message clears itself; the saved file is its own success message.
@@ -71,6 +75,7 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
     addNote,
     retry: reload,
     editStudent: () => setIsEditing(true),
+    deleteStudent: () => setIsConfirmingDelete(true),
     shareWithParent: () => setIsSharing(true),
     downloadReport,
     // TODO(dialog): Record payment (POST /teacher/students/:studentId/payments)
@@ -169,6 +174,18 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
               profile={state.data.profile}
               onSubmit={editStudent}
               onClose={() => setIsEditing(false)}
+            />
+          )}
+
+          {isConfirmingDelete && (
+            <DeleteStudentDialog
+              data={state.data}
+              onConfirm={async (withPayments) => {
+                const { gradeId } = await deleteStudent(studentId, { withPayments });
+                // replace: Back shouldn't return to a profile that no longer exists.
+                navigate(`/teacher/students/grades/${gradeId}`, { replace: true });
+              }}
+              onClose={() => setIsConfirmingDelete(false)}
             />
           )}
 

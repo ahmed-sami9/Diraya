@@ -163,6 +163,74 @@ export async function updateStudentDetails(
   return (student.rowCount ?? 0) > 0 ? 'group-not-found' : 'student-not-found';
 }
 
+export type DeleteStudentResult =
+  | { status: 'deleted'; gradeId: string }
+  | { status: 'not-found' }
+  | { status: 'has-payments'; paidTotal: number };
+
+// Deletes a student and, through ON DELETE CASCADE, everything of theirs:
+// attendance, marks, notes, payments. One transaction with its activity entry.
+//
+// The row is locked first, so a payment recorded at the same moment either
+// lands before the check (and is counted) or waits and finds no student.
+export async function deleteStudent(
+  teacherId: string,
+  studentId: string,
+  { withPayments }: { withPayments: boolean }
+): Promise<DeleteStudentResult> {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const found = await client.query<{ name: string; grade_id: string; grade_name: string }>(
+      `
+        SELECT s.full_name AS name, g.id::text AS grade_id, g.name AS grade_name
+        FROM students s
+        JOIN grades g ON g.id = s.grade_id
+        WHERE s.teacher_id = $1 AND s.id = $2
+        FOR UPDATE OF s
+      `,
+      [teacherId, studentId]
+    );
+    const student = found.rows[0];
+
+    if (!student) {
+      await client.query('ROLLBACK');
+      return { status: 'not-found' };
+    }
+
+    // Voided payments don't count: they were mistakes, already cancelled.
+    const paid = await client.query<{ total: number }>(
+      `SELECT COALESCE(SUM(amount), 0)::int AS total FROM payments WHERE student_id = $1 AND voided_at IS NULL`,
+      [studentId]
+    );
+    const paidTotal = paid.rows[0]!.total;
+
+    if (paidTotal > 0 && !withPayments) {
+      await client.query('ROLLBACK');
+      return { status: 'has-payments', paidTotal };
+    }
+
+    await client.query('DELETE FROM students WHERE id = $1', [studentId]);
+
+    await logActivity(client, teacherId, 'student.deleted', {
+      studentName: student.name,
+      gradeName: student.grade_name,
+      paidTotal,
+    });
+
+    await client.query('COMMIT');
+
+    return { status: 'deleted', gradeId: student.grade_id };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export type NewStudent = {
   fullName: string;
   parentPhone: string;

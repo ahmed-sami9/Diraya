@@ -113,6 +113,7 @@ function ProfileHeader({ profile, actions }: ProfileHeaderProps) {
               { label: 'Download PDF report', onSelect: actions.downloadReport },
               // The same Edit form: the group is one of its fields.
               { label: 'Move to another group', onSelect: actions.editStudent },
+              { label: 'Delete student', tone: 'danger', onSelect: actions.deleteStudent },
             ]}
           />
         </div>

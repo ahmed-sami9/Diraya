@@ -17,6 +17,14 @@ export type ActivityDetails = {
     groupName: string;
   };
 
+  // No id: the student is gone. paidTotal is what their deleted
+  // payments added up to, so the money that went with them is on record.
+  'student.deleted': {
+    studentName: string;
+    gradeName: string;
+    paidTotal: number;
+  };
+
   'payment.recorded': {
     studentId: string;
     studentName: string;

@@ -4,7 +4,15 @@ import type { ActivityEntry } from '../api/activity/activity';
 // words them. One place for every sentence, so rewording (or translating)
 // changes old entries too. Pure functions only, unit-tested.
 
-export type ActivityKind = 'student' | 'payment' | 'void' | 'attendance' | 'exam' | 'marks' | 'other';
+export type ActivityKind =
+  | 'student'
+  | 'removed'
+  | 'payment'
+  | 'void'
+  | 'attendance'
+  | 'exam'
+  | 'marks'
+  | 'other';
 
 export type DescribedActivity = {
   kind: ActivityKind; // picks the icon and colour
@@ -40,8 +48,7 @@ export function monthsLabel(months: string[]): string {
 }
 
 // "2026-11-02" -> "Mon 2 Nov"
-const dayLabel = (day: string) =>
-  shortDay.format(new Date(`${day}T12:00:00Z`)).replace(',', '');
+const dayLabel = (day: string) => shortDay.format(new Date(`${day}T12:00:00Z`)).replace(',', '');
 
 export function describeActivity(entry: ActivityEntry): DescribedActivity {
   switch (entry.type) {
@@ -52,6 +59,18 @@ export function describeActivity(entry: ActivityEntry): DescribedActivity {
         title: 'Added a student',
         detail: `${d.studentName} · ${d.gradeName}, ${d.groupName}`,
         to: `/teacher/students/${d.studentId}`,
+      };
+    }
+    case 'student.deleted': {
+      const d = entry.details;
+      return {
+        kind: 'removed',
+        title: 'Deleted a student',
+        detail:
+          `${d.studentName} · ${d.gradeName}` +
+          (d.paidTotal > 0 ? ` · ${formatMoney(d.paidTotal)} in payments deleted` : ''),
+        // Nothing to open: the profile is gone.
+        to: null,
       };
     }
     case 'payment.recorded': {

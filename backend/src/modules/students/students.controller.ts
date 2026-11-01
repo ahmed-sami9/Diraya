@@ -1,7 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
 
-import { addStudent, editStudent, listGradeStudents, searchStudents } from './students.service';
-import type { StudentSearchQuery } from './students.validation';
+import {
+  addStudent,
+  editStudent,
+  listGradeStudents,
+  removeStudent,
+  searchStudents,
+} from './students.service';
+import type { DeleteStudentQuery, StudentSearchQuery } from './students.validation';
 
 // GET /teacher/students/search?q=om
 // The checked query is in res.locals.query (see validateQuery).
@@ -46,6 +52,26 @@ export async function postStudent(
     const student = await addStudent(req.user!.userId, req.params.gradeId, req.body);
 
     res.status(201).json({ student });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteStudentRoute(
+  req: Request<{ studentId: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { withPayments } = res.locals.query as DeleteStudentQuery;
+
+    const result = await removeStudent(
+      req.user!.userId,
+      req.params.studentId,
+      withPayments === 'true'
+    );
+
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }

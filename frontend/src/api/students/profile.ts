@@ -9,6 +9,7 @@ import type { PaymentStatus, StudentDetails } from './students';
 //
 //   GET   /teacher/students/:studentId             -> 200 { profile: StudentProfile }
 //   PATCH /teacher/students/:studentId             -> 200 { profile: StudentProfile }
+//   DELETE /teacher/students/:studentId[?withPayments=true] -> 200 { gradeId }
 //   GET  /teacher/students/:studentId/attendance   -> 200 { attendance: AttendanceRecord[] }
 //   GET  /teacher/students/:studentId/exams        -> 200 { exams: ExamResult[] }
 //   GET  /teacher/students/:studentId/payments     -> 200 { payments: PaymentMonth[] }
@@ -19,6 +20,7 @@ import type { PaymentStatus, StudentDetails } from './students';
 //
 //   STUDENT_NOT_FOUND   404  no student with this id for this teacher
 //   GROUP_NOT_FOUND     404  (edit) the group is gone, or not in their grade
+//   STUDENT_HAS_PAYMENTS 409 (delete) they have payments and withPayments wasn't sent
 //   INVALID_INPUT       400  the note or the details failed validation
 //
 // Conventions: ids are strings, dates ISO strings, a month is "YYYY-MM",
@@ -140,6 +142,18 @@ export async function updateStudent(
   });
 
   return data.profile;
+}
+
+// Deletes the student and everything of theirs. withPayments: the teacher
+// agreed to delete their payments too; without it, a student with payments
+// is refused (STUDENT_HAS_PAYMENTS). Answers with their grade, to go back to.
+export async function deleteStudent(
+  studentId: string,
+  { withPayments }: { withPayments: boolean }
+): Promise<{ gradeId: string }> {
+  const query = withPayments ? '?withPayments=true' : '';
+
+  return apiRequest<{ gradeId: string }>('DELETE', `${studentPath(studentId)}${query}`);
 }
 
 export async function getStudentAttendance(
