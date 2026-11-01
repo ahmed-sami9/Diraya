@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError } from '../../../../../api/apiClient';
 import type { GroupSummary } from '../../../../../api/students/groups';
-import type { StudentInput } from '../../../../../api/students/students';
+import type { StudentDetails, StudentInput } from '../../../../../api/students/students';
 import DialogShell from '../../../../../components/DialogShell';
 import {
   formErrorClasses,
@@ -10,18 +10,31 @@ import {
   primaryButtonClasses,
   secondaryButtonClasses,
 } from '../../../../../components/formStyles';
-import { isValidEgyptMobile, normalizePhone } from '../../../../../utils/phone';
+import { formatPhone, isValidEgyptMobile, normalizePhone } from '../../../../../utils/phone';
 
-interface StudentFormDialogProps {
+// One form, two jobs: adding and editing share every field and rule, so
+// they can't drift apart. Each mode sends what its endpoint takes.
+type StudentFormDialogProps = {
   gradeName: string;
   groups: GroupSummary[];
-  // The group picked in the filter, so adding from "Group A" puts them there.
-  // null ("All students"): the grade's first group is preselected.
-  defaultGroupId: string | null;
-  // Sends the form to the server. Throws (ApiError) if the server refuses.
-  onSubmit: (input: StudentInput) => Promise<void>;
+  // Replaces the group hint, e.g. while the other groups are still loading.
+  groupHint?: string;
   onClose: () => void;
-}
+} & (
+  | {
+      mode: 'add';
+      // The group picked in the filter, so adding from "Group A" puts them there.
+      // null ("All students"): the grade's first group is preselected.
+      defaultGroupId: string | null;
+      // Sends the form to the server. Throws (ApiError) if the server refuses.
+      onSubmit: (input: StudentInput) => Promise<void>;
+    }
+  | {
+      mode: 'edit';
+      student: StudentDetails;
+      onSubmit: (details: StudentDetails) => Promise<void>;
+    }
+);
 
 // Must match the limits the backend enforces.
 const NAME_MAX_LENGTH = 100;
@@ -32,24 +45,25 @@ type FieldErrors = Partial<Record<Field, string>>;
 
 const PHONE_HINT = 'An Egyptian mobile number, like 010 1234 5678.';
 
-// "Add student". Only what's needed to start: the student's name, a
-// parent's number (the person a teacher calls about absences and payments)
-// and their group (the class whose attendance sheet they appear on).
-// Everything else can be filled in later from the student's profile.
+// "Add student" and "Edit student". Only what's needed to start: the
+// student's name, a parent's number (the person a teacher calls about
+// absences and payments) and their group (the class whose attendance sheet
+// they appear on). Add also takes a first note.
 //
 // The student's code (26-0042) isn't typed here: the server gives it.
-function StudentFormDialog({
-  gradeName,
-  groups,
-  defaultGroupId,
-  onSubmit,
-  onClose,
-}: StudentFormDialogProps) {
-  const [fullName, setFullName] = useState('');
-  const [parentPhone, setParentPhone] = useState('');
-  const [phone, setPhone] = useState('');
+function StudentFormDialog(props: StudentFormDialogProps) {
+  const { gradeName, groups, groupHint, onClose } = props;
+  const isEdit = props.mode === 'edit';
+  const initial = props.mode === 'edit' ? props.student : null;
+
+  const [fullName, setFullName] = useState(initial?.fullName ?? '');
+  // Shown spaced ("010 1234 5678"), the way people read and type them.
+  const [parentPhone, setParentPhone] = useState(initial ? formatPhone(initial.parentPhone) : '');
+  const [phone, setPhone] = useState(initial?.phone ? formatPhone(initial.phone) : '');
   // Always starts on a real group: every grade has at least one.
-  const [groupId, setGroupId] = useState(defaultGroupId ?? groups[0]?.id ?? '');
+  const [groupId, setGroupId] = useState(
+    props.mode === 'edit' ? props.student.groupId : (props.defaultGroupId ?? groups[0]?.id ?? '')
+  );
   const [notes, setNotes] = useState('');
 
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -109,16 +123,29 @@ function StudentFormDialog({
     if (found.phone) return phoneRef.current?.focus();
     if (found.groupId || found.notes) return;
 
+    const details: StudentDetails = {
+      fullName: name,
+      parentPhone: parent,
+      phone: own || null,
+      groupId,
+    };
+
+    // Nothing changed: no request, nothing to save.
+    if (
+      props.mode === 'edit' &&
+      (Object.keys(details) as (keyof StudentDetails)[]).every(
+        (key) => details[key] === props.student[key]
+      )
+    ) {
+      onClose();
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      await onSubmit({
-        fullName: name,
-        parentPhone: parent,
-        phone: own || null,
-        groupId,
-        notes: note || null,
-      });
+      if (props.mode === 'edit') await props.onSubmit(details);
+      else await props.onSubmit({ ...details, notes: note || null });
 
       onClose();
     } catch (error) {
@@ -141,8 +168,12 @@ function StudentFormDialog({
 
   return (
     <DialogShell
-      title="Add student"
-      description={`To ${gradeName}. You can add the rest of their details later, from their profile.`}
+      title={isEdit ? 'Edit student' : 'Add student'}
+      description={
+        isEdit
+          ? `In ${gradeName}. A new group takes their attendance from now on; past sessions stay as they were.`
+          : `To ${gradeName}. You can add the rest of their details later, from their profile.`
+      }
       onRequestClose={requestClose}
       isBusy={isSaving}
       initialFocusRef={nameRef}
@@ -301,38 +332,41 @@ function StudentFormDialog({
             id={`${ids.groupId}-hint`}
             className={`text-[13px] ${errors.groupId ? 'text-danger' : 'text-ink-secondary'}`}
           >
-            {errors.groupId ?? 'Their attendance is taken with this group.'}
+            {errors.groupId ?? groupHint ?? 'Their attendance is taken with this group.'}
           </p>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={ids.notes}
-            className={labelClasses}
-          >
-            Notes {optional}
-          </label>
-          <textarea
-            id={ids.notes}
-            value={notes}
-            onChange={(event) => {
-              setNotes(event.target.value);
-              clearError('notes');
-            }}
-            disabled={isSaving}
-            rows={3}
-            placeholder="Only you can see these. e.g. sibling of Salma, pays in cash"
-            aria-invalid={Boolean(errors.notes)}
-            aria-describedby={`${ids.notes}-count`}
-            className={`${inputClasses(Boolean(errors.notes))} h-auto resize-y py-3`}
-          />
-          <p
-            id={`${ids.notes}-count`}
-            className={`text-right text-[13px] ${errors.notes ? 'text-danger' : 'text-ink-muted'}`}
-          >
-            {errors.notes ?? `${notes.trim().length}/${NOTES_MAX_LENGTH}`}
-          </p>
-        </div>
+        {/* Notes are added on the profile once the student exists. */}
+        {!isEdit && (
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor={ids.notes}
+              className={labelClasses}
+            >
+              Notes {optional}
+            </label>
+            <textarea
+              id={ids.notes}
+              value={notes}
+              onChange={(event) => {
+                setNotes(event.target.value);
+                clearError('notes');
+              }}
+              disabled={isSaving}
+              rows={3}
+              placeholder="Only you can see these. e.g. sibling of Salma, pays in cash"
+              aria-invalid={Boolean(errors.notes)}
+              aria-describedby={`${ids.notes}-count`}
+              className={`${inputClasses(Boolean(errors.notes))} h-auto resize-y py-3`}
+            />
+            <p
+              id={`${ids.notes}-count`}
+              className={`text-right text-[13px] ${errors.notes ? 'text-danger' : 'text-ink-muted'}`}
+            >
+              {errors.notes ?? `${notes.trim().length}/${NOTES_MAX_LENGTH}`}
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap justify-end gap-2.5">
           <button
@@ -349,7 +383,13 @@ function StudentFormDialog({
             aria-busy={isSaving}
             className={primaryButtonClasses}
           >
-            {isSaving ? 'Adding…' : 'Add student'}
+            {isEdit
+              ? isSaving
+                ? 'Saving…'
+                : 'Save changes'
+              : isSaving
+                ? 'Adding…'
+                : 'Add student'}
           </button>
         </div>
       </form>

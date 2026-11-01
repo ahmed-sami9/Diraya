@@ -47,3 +47,13 @@ export const studentInputSchema = z.object({
 export type StudentInput = z.infer<typeof studentInputSchema>;
 
 export const validateStudentInput = validateBody(studentInputSchema, 'Invalid student data');
+
+/* ----------------------------- Edit a student ----------------------------- */
+
+// The same rules as adding, minus the note (notes live on the profile).
+// The form sends every field, so there is no "missing means unchanged".
+export const studentDetailsSchema = studentInputSchema.omit({ notes: true });
+
+export type StudentDetails = z.infer<typeof studentDetailsSchema>;
+
+export const validateStudentDetails = validateBody(studentDetailsSchema, 'Invalid student data');

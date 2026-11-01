@@ -69,12 +69,17 @@ export type GradeStudent = {
   paymentStatus: PaymentStatus | null;
 };
 
-// What the "Add student" form sends. Phones are digits only, e.g. "01012345678".
-export type StudentInput = {
+// What the "Edit student" form sends. Phones are digits only, e.g. "01012345678".
+export type StudentDetails = {
   fullName: string;
   parentPhone: string;
   phone: string | null;
+  // A group in the student's own grade.
   groupId: string;
+};
+
+// What the "Add student" form sends: the details, plus a first note.
+export type StudentInput = StudentDetails & {
   notes: string | null;
 };
 

@@ -111,7 +111,8 @@ function ProfileHeader({ profile, actions }: ProfileHeaderProps) {
             buttonClassName="h-11 w-11 rounded-[10px] border border-border bg-surface text-ink-secondary hover:bg-surface-hover"
             items={[
               { label: 'Download PDF report', onSelect: actions.downloadReport },
-              { label: 'Move to another group', onSelect: actions.moveToGroup },
+              // The same Edit form: the group is one of its fields.
+              { label: 'Move to another group', onSelect: actions.editStudent },
             ]}
           />
         </div>

@@ -8,14 +8,17 @@ import { gradeExists } from '../grades/grades.repository';
 import { GroupErrors } from '../groups/groups.errors';
 import type { MonthStatus } from '../payments/payments.repository';
 
+import { getStudentProfile, type StudentProfile } from './profile/students.profile.service';
+import { StudentErrors } from './students.errors';
 import {
   countStudents,
   findStudentsByGrade,
   insertStudentWithCode,
   searchStudentsByName,
+  updateStudentDetails,
   type GradeStudentRow,
 } from './students.repository';
-import type { StudentInput } from './students.validation';
+import type { StudentDetails, StudentInput } from './students.validation';
 
 // The dropdown shows at most this many. Enough to find someone by a partial
 // name; if there are more, the teacher types another letter.
@@ -125,6 +128,31 @@ export async function addStudent(
   );
 
   return toGradeStudent(row ?? result.student);
+}
+
+// PATCH /teacher/students/:studentId
+//
+// Answers with the whole profile, so the page shows exactly what was saved
+// (the new group's schedule included) without loading everything again.
+export async function editStudent(
+  teacherId: string,
+  studentId: string,
+  input: StudentDetails
+): Promise<StudentProfile> {
+  let outcome: Awaited<ReturnType<typeof updateStudentDetails>>;
+
+  try {
+    outcome = await updateStudentDetails(teacherId, studentId, input);
+  } catch (error) {
+    // The group was deleted between the check and the write.
+    if (isForeignKeyViolation(error, 'students_group_in_grade_fkey')) throw GroupErrors.notFound();
+    throw error;
+  }
+
+  if (outcome === 'student-not-found') throw StudentErrors.notFound();
+  if (outcome === 'group-not-found') throw GroupErrors.notFound();
+
+  return getStudentProfile(teacherId, studentId);
 }
 
 /* ------------------------------ Home summary ------------------------------ */

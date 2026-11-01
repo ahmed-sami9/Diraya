@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 
-import { addStudent, listGradeStudents, searchStudents } from './students.service';
+import { addStudent, editStudent, listGradeStudents, searchStudents } from './students.service';
 import type { StudentSearchQuery } from './students.validation';
 
 // GET /teacher/students/search?q=om
@@ -46,6 +46,20 @@ export async function postStudent(
     const student = await addStudent(req.user!.userId, req.params.gradeId, req.body);
 
     res.status(201).json({ student });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function patchStudent(
+  req: Request<{ studentId: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const profile = await editStudent(req.user!.userId, req.params.studentId, req.body);
+
+    res.status(200).json({ profile });
   } catch (error) {
     next(error);
   }

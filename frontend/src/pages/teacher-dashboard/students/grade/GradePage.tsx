@@ -322,6 +322,7 @@ function GradePageContent({ gradeId }: { gradeId: string }) {
       {/* Dialogs: mounted only while open, so each opening starts fresh. */}
       {grade && dialog?.type === 'add-student' && (
         <StudentFormDialog
+          mode="add"
           gradeName={grade.name}
           groups={groups}
           defaultGroupId={selectedGroup?.id ?? null}

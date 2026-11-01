@@ -8,6 +8,7 @@ import { useDelayedFlag } from '../../../../hooks/useDelayedFlag';
 import { useStudentProfile } from '../../../../hooks/students/useStudentProfile';
 import { todayInCairo } from '../../../../utils/cairoDate';
 
+import EditStudentDialog from './components/EditStudentDialog';
 import ProfileHeader from './components/ProfileHeader';
 import ProfileTabs from './components/ProfileTabs';
 import SummaryTiles from './components/SummaryTiles';
@@ -32,9 +33,10 @@ function StudentProfileLayout() {
 }
 
 function StudentProfileContent({ studentId }: { studentId: string }) {
-  const { state, reload, addNote } = useStudentProfile(studentId);
+  const { state, reload, addNote, editStudent } = useStudentProfile(studentId);
   const { user } = useAuth();
   const [isSharing, setIsSharing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [reportStatus, setReportStatus] = useState<'idle' | 'working' | 'failed'>('idle');
 
   // A failure message clears itself; the saved file is its own success message.
@@ -68,12 +70,9 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
   const actions: ProfileActions = {
     addNote,
     retry: reload,
-    // TODO(dialog): Edit student (PATCH /teacher/students/:studentId)
-    editStudent: () => console.info('TODO: open the Edit student dialog'),
+    editStudent: () => setIsEditing(true),
     shareWithParent: () => setIsSharing(true),
     downloadReport,
-    // TODO(dialog): Move to group (PATCH /teacher/students/:studentId { groupId })
-    moveToGroup: () => console.info('TODO: open the Move to group dialog'),
     // TODO(dialog): Record payment (POST /teacher/students/:studentId/payments)
     recordPayment: () => console.info('TODO: open the Record payment dialog'),
   };
@@ -164,6 +163,14 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
           <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-surface" />}>
             <Outlet context={{ data: state.data, actions } satisfies ProfileOutletContext} />
           </Suspense>
+
+          {isEditing && (
+            <EditStudentDialog
+              profile={state.data.profile}
+              onSubmit={editStudent}
+              onClose={() => setIsEditing(false)}
+            />
+          )}
 
           {/* Always signed in here (a protected route); the check is for TypeScript. */}
           {isSharing && user && (

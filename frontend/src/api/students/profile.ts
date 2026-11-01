@@ -1,13 +1,14 @@
 import { apiRequest } from '../apiClient';
 
 import type { GroupSession } from './groups';
-import type { PaymentStatus } from './students';
+import type { PaymentStatus, StudentDetails } from './students';
 
 // One student's profile.
 //
 // Backend endpoints (backend/src/modules/students/profile):
 //
-//   GET  /teacher/students/:studentId              -> 200 { profile: StudentProfile }
+//   GET   /teacher/students/:studentId             -> 200 { profile: StudentProfile }
+//   PATCH /teacher/students/:studentId             -> 200 { profile: StudentProfile }
 //   GET  /teacher/students/:studentId/attendance   -> 200 { attendance: AttendanceRecord[] }
 //   GET  /teacher/students/:studentId/exams        -> 200 { exams: ExamResult[] }
 //   GET  /teacher/students/:studentId/payments     -> 200 { payments: PaymentMonth[] }
@@ -17,7 +18,8 @@ import type { PaymentStatus } from './students';
 // Error codes (read them from ApiError.code):
 //
 //   STUDENT_NOT_FOUND   404  no student with this id for this teacher
-//   INVALID_INPUT       400  the note failed validation
+//   GROUP_NOT_FOUND     404  (edit) the group is gone, or not in their grade
+//   INVALID_INPUT       400  the note or the details failed validation
 //
 // Conventions: ids are strings, dates ISO strings, a month is "YYYY-MM",
 // money is whole Egyptian pounds, lists are newest first, and null means
@@ -123,6 +125,18 @@ export async function getStudentProfile(
 ): Promise<StudentProfile> {
   const data = await apiRequest<{ profile: StudentProfile }>('GET', studentPath(studentId), {
     signal,
+  });
+
+  return data.profile;
+}
+
+// Saves name, phones and group; answers with the whole updated profile.
+export async function updateStudent(
+  studentId: string,
+  details: StudentDetails
+): Promise<StudentProfile> {
+  const data = await apiRequest<{ profile: StudentProfile }>('PATCH', studentPath(studentId), {
+    body: details,
   });
 
   return data.profile;

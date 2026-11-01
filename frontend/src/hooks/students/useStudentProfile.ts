@@ -8,12 +8,14 @@ import {
   getStudentNotes,
   getStudentPayments,
   getStudentProfile,
+  updateStudent,
   type AttendanceRecord,
   type ExamResult,
   type PaymentMonth,
   type StudentProfile,
   type TeacherNote,
 } from '../../api/students/profile';
+import type { StudentDetails } from '../../api/students/students';
 
 // Everything the profile page shows, loaded together.
 export type StudentProfileData = {
@@ -94,5 +96,20 @@ export function useStudentProfile(studentId: string) {
     [studentId]
   );
 
-  return { state, reload, addNote };
+  // Saves the details, then swaps in the profile the server sent back.
+  // Throws on failure so the form can show why and keep what was typed.
+  const editStudent = useCallback(
+    async (details: StudentDetails) => {
+      const profile = await updateStudent(studentId, details);
+
+      setState((previous) =>
+        previous.status === 'ready'
+          ? { ...previous, data: { ...previous.data, profile } }
+          : previous
+      );
+    },
+    [studentId]
+  );
+
+  return { state, reload, addNote, editStudent };
 }

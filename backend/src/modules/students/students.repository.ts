@@ -130,6 +130,39 @@ export async function findStudentsByGrade(
   return result.rows;
 }
 
+export type UpdateStudentResult = 'updated' | 'student-not-found' | 'group-not-found';
+
+// One UPDATE that also checks the group: it must be this teacher's and in the
+// student's own grade (changing grade is a different job). If nothing was
+// updated, a second look says which of the two was missing.
+export async function updateStudentDetails(
+  teacherId: string,
+  studentId: string,
+  input: { fullName: string; parentPhone: string; phone: string | null; groupId: string }
+): Promise<UpdateStudentResult> {
+  const result = await pool.query(
+    `
+      UPDATE students s
+      SET full_name = $3, parent_phone = $4, phone = $5, group_id = $6
+      WHERE s.teacher_id = $1 AND s.id = $2
+        AND EXISTS (
+          SELECT 1 FROM groups g
+          WHERE g.id = $6 AND g.teacher_id = $1 AND g.grade_id = s.grade_id
+        )
+    `,
+    [teacherId, studentId, input.fullName, input.parentPhone, input.phone, input.groupId]
+  );
+
+  if ((result.rowCount ?? 0) > 0) return 'updated';
+
+  const student = await pool.query('SELECT 1 FROM students WHERE teacher_id = $1 AND id = $2', [
+    teacherId,
+    studentId,
+  ]);
+
+  return (student.rowCount ?? 0) > 0 ? 'group-not-found' : 'student-not-found';
+}
+
 export type NewStudent = {
   fullName: string;
   parentPhone: string;

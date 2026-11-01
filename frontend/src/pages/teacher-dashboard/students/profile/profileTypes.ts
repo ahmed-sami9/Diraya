@@ -26,7 +26,6 @@ export type ProfileActions = {
   shareWithParent: () => void;
   // Builds the 3-month PDF report and saves it.
   downloadReport: () => void;
-  moveToGroup: () => void;
   recordPayment: () => void;
   // Resolves when saved; throws (ApiError) when the server refuses.
   addNote: (text: string) => Promise<void>;
