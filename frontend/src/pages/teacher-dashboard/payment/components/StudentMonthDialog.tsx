@@ -312,7 +312,7 @@ function StudentMonthDialog({
           <textarea
             id={`${id}-note`}
             rows={2}
-            maxLength={500}
+            maxLength={300}
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="e.g. will pay the rest on Saturday"
