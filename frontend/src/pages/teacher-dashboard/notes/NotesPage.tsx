@@ -5,6 +5,7 @@ import SectionError from '../../../components/SectionError';
 import NotesIcon from '../../../components/icons/NotesIcon';
 import PinIcon from '../../../components/icons/PinIcon';
 import SearchIcon from '../../../components/icons/SearchIcon';
+import PageHeader from '../../../components/PageHeader';
 import { useMyNotes } from '../../../hooks/notes/useMyNotes';
 import { todayInCairo } from '../../../utils/cairoDate';
 import {
@@ -107,44 +108,44 @@ function NotesPage() {
   const hasNotes = visible.length > 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">My notes</h1>
-          <p className="text-sm text-ink-secondary">
-            Reminders for yourself. Pin the ones you need to keep in sight.
-          </p>
-        </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="My notes"
+        description="Reminders for yourself. Pin the ones you need to keep in sight."
+        actions={
+          <div className="flex w-full gap-2.5 sm:w-auto">
+            <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-border bg-surface px-3 text-ink-muted focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary-tint sm:w-64 sm:flex-none">
+              <SearchIcon className="h-4 w-4 shrink-0" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search notes"
+                aria-label="Search notes"
+                disabled={!hasNotes && !isSearching}
+                className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted disabled:cursor-not-allowed"
+              />
+            </label>
 
-        <div className="flex w-full gap-2.5 sm:w-auto">
-          <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-border bg-surface px-3 text-ink-muted focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary-tint sm:w-64 sm:flex-none">
-            <SearchIcon className="h-4 w-4 shrink-0" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search notes"
-              aria-label="Search notes"
-              disabled={!hasNotes && !isSearching}
-              className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted disabled:cursor-not-allowed"
-            />
-          </label>
-
-          <label htmlFor={sortId} className="sr-only">
-            Sort notes
-          </label>
-          <select
-            id={sortId}
-            value={order}
-            onChange={(event) => setOrder(event.target.value as NotesOrder)}
-            disabled={!hasNotes}
-            className="h-10 cursor-pointer rounded-[10px] border border-border bg-surface px-2.5 text-[13px] font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-          </select>
-        </div>
-      </header>
+            <label
+              htmlFor={sortId}
+              className="sr-only"
+            >
+              Sort notes
+            </label>
+            <select
+              id={sortId}
+              value={order}
+              onChange={(event) => setOrder(event.target.value as NotesOrder)}
+              disabled={!hasNotes}
+              className="h-10 cursor-pointer rounded-[10px] border border-border bg-surface px-2.5 text-[13px] font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+        }
+      />
 
       {notesData.state.status === 'error' ? (
         <SectionError
@@ -155,18 +156,30 @@ function NotesPage() {
       ) : (
         <>
           {/* Usable while the list loads: writing a note doesn't need the list. */}
-          <NoteComposer variant="page" onAdd={notesData.addNote} />
+          <NoteComposer
+            variant="page"
+            onAdd={notesData.addNote}
+          />
 
           {deleteError && (
-            <p role="alert" className="rounded-lg border border-danger/20 bg-danger-tint px-4 py-3 text-sm text-danger">
+            <p
+              role="alert"
+              className="rounded-lg border border-danger/20 bg-danger-tint px-4 py-3 text-sm text-danger"
+            >
               {deleteError}
             </p>
           )}
 
           {notesData.state.status === 'loading' ? (
-            <ul aria-hidden="true" className="flex flex-col divide-y divide-border rounded-[14px] border border-border bg-surface">
+            <ul
+              aria-hidden="true"
+              className="flex flex-col divide-y divide-border rounded-[14px] border border-border bg-surface"
+            >
               {[0, 1, 2].map((row) => (
-                <li key={row} className="flex items-center gap-3 px-5 py-4">
+                <li
+                  key={row}
+                  className="flex items-center gap-3 px-5 py-4"
+                >
                   <span className="h-6 w-6 animate-pulse rounded-md bg-surface-hover" />
                   <span className="h-4 flex-1 animate-pulse rounded bg-surface-hover" />
                 </li>
@@ -182,8 +195,8 @@ function NotesPage() {
               </span>
               <h2 className="mt-4 text-base font-bold text-ink">No notes yet</h2>
               <p className="mt-1 max-w-sm text-sm text-ink-secondary">
-                Things to print, people to call, ideas for next week. Write them above and they’ll be
-                waiting here.
+                Things to print, people to call, ideas for next week. Write them above and they’ll
+                be waiting here.
               </p>
               <p className="mt-4 flex items-center gap-1.5 text-[13px] text-ink-muted">
                 <PinIcon className="h-4 w-4" />
@@ -197,13 +210,19 @@ function NotesPage() {
           ) : (
             <div className="flex flex-col gap-5">
               {isSearching && (
-                <p aria-live="polite" className="text-[13px] text-ink-muted">
+                <p
+                  aria-live="polite"
+                  className="text-[13px] text-ink-muted"
+                >
                   {matches.length} of {visible.length} notes match “{query.trim()}”
                 </p>
               )}
 
               {groups.map((group) => (
-                <section key={group.key} aria-label={group.label || 'Search results'}>
+                <section
+                  key={group.key}
+                  aria-label={group.label || 'Search results'}
+                >
                   {group.label && (
                     <h2 className="mb-2 flex items-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wider text-ink-muted">
                       {group.label}
@@ -231,7 +250,13 @@ function NotesPage() {
         </>
       )}
 
-      {pending && <UndoToast message="Note deleted" onUndo={undo} onClose={commitPending} />}
+      {pending && (
+        <UndoToast
+          message="Note deleted"
+          onUndo={undo}
+          onClose={commitPending}
+        />
+      )}
     </div>
   );
 }

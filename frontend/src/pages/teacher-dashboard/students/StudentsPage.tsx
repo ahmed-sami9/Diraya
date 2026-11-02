@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { GradeSummary } from '../../../api/students/grades';
 import PlusIcon from '../../../components/icons/PlusIcon';
 import SectionError from '../../../components/SectionError';
+import PageHeader from '../../../components/PageHeader';
 import { useDelayedFlag } from '../../../hooks/useDelayedFlag';
 import { useGrades } from '../../../hooks/students/useGrades';
 import { pluralize } from '../../../utils/formatSession';
@@ -66,33 +67,29 @@ function StudentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Heading. The left padding lines the title up with the greeting in
-          the navbar card (its padding plus its 1px border). */}
-      <div className="flex flex-wrap items-end justify-between gap-4 pl-[17px] sm:pl-[25px]">
-        <div>
-          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">
-            Students
-          </h1>
-          <p className="mt-1.5 text-[15px] text-ink-secondary">
-            Your students, organised by grade
-            {hasGrades &&
-              ` · ${pluralize(grades.length, 'grade')}, ${pluralize(studentTotal, 'student')}`}
-          </p>
-        </div>
-
-        {/* Hidden in the empty state, which has its own button: one primary
-            action per screen. */}
-        {hasGrades && (
-          <button
-            type="button"
-            onClick={() => setDialog({ type: 'create' })}
-            className={primaryButtonClasses}
-          >
-            <PlusIcon className="h-[18px] w-[18px]" />
-            Add grade
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Students"
+        description={
+          'Your students, organised by grade' +
+          (hasGrades
+            ? ` · ${pluralize(grades.length, 'grade')}, ${pluralize(studentTotal, 'student')}`
+            : '')
+        }
+        // Hidden in the empty state, which has its own button: one primary
+        // action per screen.
+        actions={
+          hasGrades && (
+            <button
+              type="button"
+              onClick={() => setDialog({ type: 'create' })}
+              className={primaryButtonClasses}
+            >
+              <PlusIcon className="h-[18px] w-[18px]" />
+              Add grade
+            </button>
+          )
+        }
+      />
 
       {status === 'loading' && <GradesSkeleton />}
 

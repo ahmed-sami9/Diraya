@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useCallback, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 
 import TeacherSidebar from './TeacherSidebar';
@@ -13,6 +13,8 @@ function TeacherDashboardLayout() {
 
   // Small screens only: the sidebar is a slide-in drawer.
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  // Stable, so the drawer's focus effect runs once per opening, not every render.
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ function TeacherDashboardLayout() {
           Always rendered, so it can fade in and out with the drawer. */}
       <div
         aria-hidden="true"
-        onClick={() => setSidebarOpen(false)}
+        onClick={closeSidebar}
         className={`
           fixed inset-0 z-30 bg-ink/40
           transition-opacity duration-300 ease-out
@@ -60,7 +62,7 @@ function TeacherDashboardLayout() {
       {/* Permanent sidebar: fixed drawer on small screens, sticky column from lg */}
       <TeacherSidebar
         isOpen={isSidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={closeSidebar}
         teacherName={teacherName}
         teacherRole="Teacher"
         onLogout={handleLogout}
@@ -79,9 +81,9 @@ function TeacherDashboardLayout() {
             px-4 py-3
 
             rounded-lg
-            border border-red-200
-            bg-red-50
-            text-sm text-red-700
+            border border-danger/20
+            bg-danger-tint
+            text-sm text-danger
             shadow-lg
           "
         >
@@ -99,7 +101,7 @@ function TeacherDashboardLayout() {
 
               focus-visible:outline-none
               focus-visible:ring-2
-              focus-visible:ring-red-400
+              focus-visible:ring-danger
             "
           >
             Dismiss
@@ -117,9 +119,13 @@ function TeacherDashboardLayout() {
         {/* Changing page. A slow page shows the loader after a short wait;
             a fast page appears with no loader at all. */}
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
-          <Suspense fallback={<PageLoader />}>
-            <Outlet />
-          </Suspense>
+          {/* One width for every page, so a section's content starts at the
+              same place whichever page the teacher opens. */}
+          <div className="mx-auto w-full max-w-[1200px]">
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </div>
         </main>
       </div>
     </div>

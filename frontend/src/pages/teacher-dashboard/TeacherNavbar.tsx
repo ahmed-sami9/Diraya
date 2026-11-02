@@ -63,9 +63,10 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
     // The outer strip is page-coloured, so content scrolling underneath
     // never shows through the gap around the card.
     <div className="z-20 bg-page px-4 pt-4 sm:px-6 lg:sticky lg:top-0 lg:px-8 lg:pt-6">
+      {/* The same width as the page content below, so their edges line up. */}
       <header
         className="
-          flex min-h-[76px] flex-wrap items-center gap-3
+          mx-auto flex min-h-[76px] w-full max-w-[1200px] flex-wrap items-center gap-3
           rounded-2xl border border-primary/15 bg-primary-tint
           px-4 py-3
           sm:px-6

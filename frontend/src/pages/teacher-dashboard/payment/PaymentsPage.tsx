@@ -5,6 +5,7 @@ import SectionError from '../../../components/SectionError';
 import PaymentsIcon from '../../../components/icons/PaymentsIcon';
 import PlusIcon from '../../../components/icons/PlusIcon';
 import { primaryButtonClasses } from '../../../components/formStyles';
+import PageHeader from '../../../components/PageHeader';
 import { usePaymentsOverview } from '../../../hooks/payments/usePayments';
 import { useGrades } from '../../../hooks/students/useGrades';
 
@@ -83,35 +84,32 @@ function PaymentsPage() {
   const hasGrades = grades.length > 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Payments</h1>
-          <p className="text-sm text-ink-secondary">
-            What each month should bring in, what came in, and who still owes.
-          </p>
-        </div>
-
-        {/* Only once there's something to look at: with nothing recorded,
-            the empty state's own button is the one next step. */}
-        {overview?.hasAnyPayment && (
-          <div className="flex flex-wrap items-center gap-2.5">
-            <MonthSwitcher
-              month={month}
-              canGoForward={month < thisMonth}
-              onChange={goToMonth}
-            />
-            <button
-              type="button"
-              onClick={() => openRecord()}
-              className={`${primaryButtonClasses} flex items-center gap-2`}
-            >
-              <PlusIcon className="h-[18px] w-[18px]" />
-              Record payment
-            </button>
-          </div>
-        )}
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Payments"
+        description="What each month should bring in, what came in, and who still owes."
+        // Only once there's something to look at: with nothing recorded,
+        // the empty state's own button is the one next step.
+        actions={
+          overview?.hasAnyPayment && (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <MonthSwitcher
+                month={month}
+                canGoForward={month < thisMonth}
+                onChange={goToMonth}
+              />
+              <button
+                type="button"
+                onClick={() => openRecord()}
+                className={`${primaryButtonClasses} flex items-center gap-2`}
+              >
+                <PlusIcon className="h-[18px] w-[18px]" />
+                Record payment
+              </button>
+            </div>
+          )
+        }
+      />
 
       {gradesData.status === 'error' ? (
         <SectionError

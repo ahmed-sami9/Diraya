@@ -6,6 +6,7 @@ import SectionError from '../../../components/SectionError';
 import ExamsIcon from '../../../components/icons/ExamsIcon';
 import PlusIcon from '../../../components/icons/PlusIcon';
 import { primaryButtonClasses } from '../../../components/formStyles';
+import PageHeader from '../../../components/PageHeader';
 import { useExams } from '../../../hooks/exams/useExams';
 import { useGrades } from '../../../hooks/students/useGrades';
 import { todayInCairo } from '../../../utils/cairoDate';
@@ -94,29 +95,26 @@ function ExamsPage() {
   }, [exams, gradeId, today]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Exams &amp; marks</h1>
-          <p className="text-sm text-ink-secondary">
-            Every exam and quiz you’ve set. Open one to see its results or enter marks.
-          </p>
-        </div>
-
-        {/* Hidden while empty: the empty state has its own, bigger button,
-            and two buttons doing the same thing on one screen is noise. */}
-        {exams.length > 0 && (
-          <button
-            type="button"
-            onClick={openAddExam}
-            disabled={!hasGrades}
-            className={`${primaryButtonClasses} flex items-center gap-2`}
-          >
-            <PlusIcon className="h-[18px] w-[18px]" />
-            Add exam
-          </button>
-        )}
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Exams & marks"
+        description="Every exam and quiz you’ve set. Open one to see its results or enter marks."
+        // Hidden while empty: the empty state has its own, bigger button,
+        // and two buttons doing the same thing on one screen is noise.
+        actions={
+          exams.length > 0 && (
+            <button
+              type="button"
+              onClick={openAddExam}
+              disabled={!hasGrades}
+              className={`${primaryButtonClasses} flex items-center gap-2`}
+            >
+              <PlusIcon className="h-[18px] w-[18px]" />
+              Add exam
+            </button>
+          )
+        }
+      />
 
       {examsData.state.status === 'error' ? (
         <SectionError

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { IsoDay } from '../../../api/attendance/attendance';
 import type { AttendanceStatus } from '../../../api/students/profile';
 import SectionError from '../../../components/SectionError';
+import PageHeader from '../../../components/PageHeader';
 import { useAttendanceOptions } from '../../../hooks/attendance/useAttendanceOptions';
 import { useAttendanceSheet } from '../../../hooks/attendance/useAttendanceSheet';
 import { useDelayedFlag } from '../../../hooks/useDelayedFlag';
@@ -15,7 +16,11 @@ import SheetControls from './components/SheetControls';
 import SheetFooter from './components/SheetFooter';
 import StudentMarkRow from './components/StudentMarkRow';
 
-const timeFormat = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit' });
+const timeFormat = new Intl.DateTimeFormat('en-GB', {
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'Africa/Cairo',
+});
 
 // /teacher/attendance?groupId=6&date=2026-10-12
 //
@@ -299,13 +304,11 @@ function AttendancePage() {
 
 function PageFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Take attendance</h1>
-        <p className="text-sm text-ink-secondary">
-          Everyone starts as present. Tap the few who aren’t, then save.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Take attendance"
+        description="Everyone starts as present. Tap the few who aren’t, then save."
+      />
       {children}
     </div>
   );

@@ -86,7 +86,7 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
     'rounded font-semibold text-ink-secondary hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
   return (
-    <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 flex-wrap items-center gap-2 pl-1 text-sm"
