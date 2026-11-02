@@ -11,7 +11,7 @@ function PublicOnlyRoute() {
   if (isAuthChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 rounded-full border-4 border-gray-200 border-t-[#3431E4] animate-spin" />
+        <div className="w-10 h-10 rounded-full border-4 border-border border-t-primary animate-spin" />
       </div>
     );
   }
