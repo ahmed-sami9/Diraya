@@ -8,6 +8,7 @@ import {
   findEarlierOwed,
   findGrade,
   findGradeGroups,
+  findGradeEarlierOwedMonths,
   findGradeOwed,
   findGradePaymentParts,
   findGradeStudentMonths,
@@ -96,6 +97,8 @@ export type GradePayments = {
     cells: StudentMonth[];
     selected: StudentMonth;
     owes: number;
+    // Months before `months` still owed, oldest first: payable from the record dialog.
+    earlierOwed: { month: IsoMonth; left: number }[];
   }[];
   totals: { expected: number; collected: number; owed: number; unpaid: number; partly: number };
 };
@@ -170,14 +173,21 @@ export async function getGradePayments(
   const now = currentMonthInCairo();
   const months = WINDOW.map((offset) => addMonths(month, offset));
 
-  const [groups, rows, owed, parts] = await Promise.all([
+  const [groups, rows, owed, parts, earlier] = await Promise.all([
     findGradeGroups(gradeId),
     findGradeStudentMonths(teacherId, gradeId, months, now),
     findGradeOwed(teacherId, gradeId, month, now),
     findGradePaymentParts(teacherId, gradeId, months),
+    findGradeEarlierOwedMonths(teacherId, gradeId, months[0]!, now),
   ]);
 
   const owesByStudent = new Map(owed.map((row) => [row.student_id, row.owes]));
+  const earlierByStudent = new Map<string, { month: IsoMonth; left: number }[]>();
+  for (const row of earlier) {
+    const list = earlierByStudent.get(row.student_id) ?? [];
+    list.push({ month: row.month, left: row.left });
+    earlierByStudent.set(row.student_id, list);
+  }
   const paymentsByCell = groupPayments(parts);
 
   // Rows come sorted by name then month; a Map keeps that order.
@@ -207,6 +217,7 @@ export async function getGradePayments(
       cells,
       selected: cells.find((cell) => cell.month === month)!,
       owes: owesByStudent.get(first.student_id) ?? 0,
+      earlierOwed: earlierByStudent.get(first.student_id) ?? [],
     };
   });
 

@@ -31,6 +31,7 @@ type StudentName =
   | 'noter'
   | 'ahead'
   | 'nofee'
+  | 'old'
   | 'other';
 const s = {} as Record<StudentName, string>; // students by short name
 
@@ -43,7 +44,7 @@ async function addTeacher(name: string) {
   return (
     await one<{ id: string }>(
       `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-      [name, `payments-test-${name}-${run}@example.com`]
+      [name, `payments-test-${name.toLowerCase()}-${run}@example.com`]
     )
   ).id;
 }
@@ -148,6 +149,7 @@ before(async () => {
   s.noter = await addStudent(teacherA, gradeA, groupA, 'Noter', '2026-08-01');
   s.ahead = await addStudent(teacherA, gradeA, groupA, 'Ahead', '2026-10-01');
   s.nofee = await addStudent(teacherA, gradeNoFee, groupNoFee, 'NoFee', '2026-08-01');
+  s.old = await addStudent(teacherA, gradeA, groupA, 'Old', '2026-04-15');
   s.other = await addStudent(teacherB, gradeB, groupB, 'Other', '2026-08-01');
 });
 
@@ -542,7 +544,8 @@ describe('overview reads', () => {
   });
 
   it('nobody owes anything before anyone joined', async () => {
-    assert.equal(await repo.findEarlierOwed(teacherA, '2026-07', NOW), null);
+    // The earliest student (Old) joined in April.
+    assert.equal(await repo.findEarlierOwed(teacherA, '2026-04', NOW), null);
   });
 
   it('latest payments: this month only, voided left out, months listed', async () => {
@@ -572,6 +575,35 @@ describe('overview reads', () => {
 });
 
 /* -------------------------------- Clean-up -------------------------------- */
+
+describe('findGradeEarlierOwedMonths (debts older than the grid)', () => {
+  const earlierOf = async (studentId: string) =>
+    (await repo.findGradeEarlierOwedMonths(teacherA, gradeA, '2026-07', NOW))
+      .filter((row) => row.student_id === studentId)
+      .map(({ month, left }) => ({ month, left }));
+
+  it('lists each month before the grid still owed, oldest first', async () => {
+    assert.deepEqual(await earlierOf(s.old), [
+      { month: '2026-04', left: 200 },
+      { month: '2026-05', left: 200 },
+      { month: '2026-06', left: 200 },
+    ]);
+  });
+
+  it('a month older than the grid can be paid, and then drops off the list', async () => {
+    await record(payment(s.old, ['2026-04', '2026-05'], 300));
+
+    assert.deepEqual(await earlierOf(s.old), [
+      { month: '2026-05', left: 100 },
+      { month: '2026-06', left: 200 },
+    ]);
+  });
+
+  it('months inside the grid are not repeated here', async () => {
+    const months = (await earlierOf(s.old)).map((row) => row.month);
+    assert.equal(months.includes('2026-07'), false);
+  });
+});
 
 describe('deleting a student', () => {
   it('removes their payments, split and month rows', async () => {

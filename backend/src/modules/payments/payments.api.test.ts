@@ -37,7 +37,7 @@ async function one<T>(sql: string, params: unknown[]): Promise<T> {
 async function signedInTeacher(name: string): Promise<{ id: string; get: Call; send: Send }> {
   const { id } = await one<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `payments-api-${name}-${Date.now()}@example.com`]
+    [name, `payments-api-${name.toLowerCase()}-${Date.now()}@example.com`]
   );
   const { token } = await startTeacherSession(id, false);
 
@@ -355,6 +355,34 @@ describe('GET /grades/:gradeId', () => {
 
 // Exactly the fields of frontend/src/api/payments/payments.ts: a rename on
 // either side fails here before it breaks the page.
+describe('debts older than the five-month window', () => {
+  it('are listed per student and can still be paid', async () => {
+    // Its own grade, so the numbers above don't move.
+    const oldGrade = await addGrade(teacherA, 'Old debts', 200);
+    const old = await addStudent(teacherA, oldGrade, 'Old', addMonths(NOW, -5));
+    const fiveAgo = addMonths(NOW, -5);
+    const fourAgo = addMonths(NOW, -4);
+
+    const [, before] = await A(`/grades/${oldGrade.gradeId}?month=${NOW}`);
+    assert.deepEqual(before.students[0].earlierOwed, [
+      { month: fiveAgo, left: 200 },
+      { month: fourAgo, left: 200 },
+    ]);
+
+    const [status, after] = await sendA('POST', `/?month=${NOW}`, {
+      requestId: randomUUID(),
+      studentId: old,
+      months: [fiveAgo],
+      amount: 200,
+      paidOn: `${NOW}-01`,
+      method: 'cash',
+      note: null,
+    });
+    assert.equal(status, 200);
+    assert.deepEqual(after.students[0].earlierOwed, [{ month: fourAgo, left: 200 }]);
+  });
+});
+
 describe('the response matches the frontend contract', () => {
   it('PaymentsOverview', async () => {
     const [, overview] = await A(`/overview?month=${NOW}`);
@@ -390,7 +418,14 @@ describe('the response matches the frontend contract', () => {
       'students',
       'totals',
     ]);
-    assert.deepEqual(sortedKeys(row), ['cells', 'groupName', 'owes', 'selected', 'student']);
+    assert.deepEqual(sortedKeys(row), [
+      'cells',
+      'earlierOwed',
+      'groupName',
+      'owes',
+      'selected',
+      'student',
+    ]);
     assert.deepEqual(sortedKeys(row.student), [
       'code',
       'discountPercent',

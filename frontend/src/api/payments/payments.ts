@@ -126,6 +126,7 @@ export type GradePayments = {
     cells: StudentMonth[]; // one per `months`
     selected: StudentMonth; // the selected month
     owes: number; // everything still owed up to the selected month
+    earlierOwed: { month: IsoMonth; left: number }[]; // months before `months` still owed, oldest first
   }[];
   totals: { expected: number; collected: number; owed: number; unpaid: number; partly: number };
 };

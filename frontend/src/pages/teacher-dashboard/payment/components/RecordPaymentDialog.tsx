@@ -88,7 +88,14 @@ function RecordPaymentDialog({
   // ahead), each with what it still needs.
   const options = useMemo(() => {
     if (!row) return [];
-    return row.cells.map((info) => {
+    // Debts older than the five shown months come first, so they can be paid too.
+    const earlier = row.earlierOwed.map(({ month, left }) => ({
+      month,
+      needs: left,
+      disabled: false,
+      hint: `${left} due`,
+    }));
+    const shown = row.cells.map((info) => {
       const isFuture = info.notDueReason === 'future';
       const needs = isFuture ? info.due : info.left;
       // Nothing to pay for: before they joined, skipped, or fully paid.
@@ -108,6 +115,7 @@ function RecordPaymentDialog({
                 : `${needs} due`;
       return { month: info.month, needs, disabled, hint };
     });
+    return [...earlier, ...shown];
   }, [row]);
 
   const needed = options
