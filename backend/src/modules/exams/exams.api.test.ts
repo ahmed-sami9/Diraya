@@ -34,7 +34,7 @@ type Call = (method: string, path: string, body?: unknown) => Promise<[number, a
 async function signedInTeacher(name: string): Promise<{ id: string; call: Call }> {
   const row = await pool.query<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `exams-api-${name}-${Date.now()}@example.com`]
+    [name, `exams-api-${name.toLowerCase()}-${Date.now()}@example.com`]
   );
   const id = row.rows[0]!.id;
   const { token } = await startTeacherSession(id, false);

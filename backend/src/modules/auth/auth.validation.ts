@@ -1,14 +1,19 @@
 import { z } from 'zod';
-import type { Request, Response, NextFunction } from 'express';
+
+import { validateBody } from '../../middlware/validate';
+
+// Emails are stored and compared in lower case, so "Ahmed@x.com" and
+// "ahmed@x.com" are one account. Every schema that takes an email uses this.
+const emailSchema = z.string().trim().toLowerCase().email().max(255);
 
 export const signUpSchema = z.object({
   fullName: z.string().trim().min(2).max(100),
-  email: z.string().trim().email().max(255),
+  email: emailSchema,
   password: z.string().min(8).max(128),
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().email().max(255),
+  email: emailSchema,
   password: z.string().min(1).max(128),
   rememberMe: z.boolean().default(false),
 });
@@ -20,55 +25,10 @@ export const googleLoginSchema = z.object({
   rememberMe: z.boolean().default(false),
 });
 
-export function validateTeacherSignup(req: Request, res: Response, next: NextFunction): void {
-  const result = signUpSchema.safeParse(req.body);
-
-  if (!result.success) {
-    res.status(400).json({
-      message: 'Invalid signup data',
-      errors: result.error.issues,
-    });
-    return;
-  }
-
-  req.body = result.data;
-  next();
-}
-
-export function validateTeacherLogin(req: Request, res: Response, next: NextFunction): void {
-  const result = loginSchema.safeParse(req.body);
-
-  if (!result.success) {
-    res.status(400).json({
-      message: 'Invalid login data',
-      errors: result.error.issues,
-    });
-    return;
-  }
-
-  req.body = result.data;
-  next();
-}
-
-export function validateGoogleLogin(req: Request, res: Response, next: NextFunction): void {
-  const result = googleLoginSchema.safeParse(req.body);
-
-  if (!result.success) {
-    res.status(400).json({
-      message: 'Invalid Google sign-in data',
-      errors: result.error.issues,
-    });
-    return;
-  }
-
-  req.body = result.data;
-  next();
-}
-
 /* ----------------------------- Password reset ----------------------------- */
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().trim().email().max(255),
+  email: emailSchema,
 });
 
 // One-time tokens (password reset and email verification links) are 43
@@ -92,33 +52,25 @@ export const verifyEmailSchema = z.object({
 });
 
 export const resendVerificationSchema = z.object({
-  email: z.string().trim().email().max(255),
+  email: emailSchema,
 });
 
-// Builds a validation middleware from a schema. It does the same job as the
-// hand-written validators above, without repeating their body three times.
-function validateBody(schema: z.ZodType, message: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const result = schema.safeParse(req.body);
+// The shared validator (middlware/validate.ts): a 400 with code INVALID_INPUT,
+// like every other module.
+export const validateTeacherSignup = validateBody(signUpSchema, 'Invalid signup data');
 
-    if (!result.success) {
-      res.status(400).json({
-        message,
-        errors: result.error.issues,
-      });
-      return;
-    }
+export const validateTeacherLogin = validateBody(loginSchema, 'Invalid login data');
 
-    req.body = result.data;
-    next();
-  };
-}
+export const validateGoogleLogin = validateBody(googleLoginSchema, 'Invalid Google sign-in data');
 
 export const validateForgotPassword = validateBody(forgotPasswordSchema, 'Invalid email address');
 
 export const validateVerifyResetToken = validateBody(verifyResetTokenSchema, 'Invalid reset link');
 
-export const validateResetPassword = validateBody(resetPasswordSchema, 'Invalid password reset data');
+export const validateResetPassword = validateBody(
+  resetPasswordSchema,
+  'Invalid password reset data'
+);
 
 export const validateVerifyEmail = validateBody(verifyEmailSchema, 'Invalid confirmation link');
 

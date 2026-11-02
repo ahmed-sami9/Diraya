@@ -40,7 +40,7 @@ async function one<T>(sql: string, params: unknown[] = []): Promise<T> {
 async function addTeacher(name: string) {
   const row = await one<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `exams-test-${name}-${run}@example.com`]
+    [name, `exams-test-${name.toLowerCase()}-${run}@example.com`]
   );
   return row.id;
 }

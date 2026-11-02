@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 
-import { errorHandler } from './middlware/errorHandler';
+import { errorHandler, notFoundHandler } from './middlware/errorHandler';
 import { getFrontendOrigin } from './config/frontendOrigin';
 
 import authRoutes from './modules/auth/auth.routes';
@@ -57,6 +57,8 @@ app.use('/api/v1', (req, res, next) => {
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/teacher', teacherRoutes);
+
+app.use(notFoundHandler);
 
 app.use(errorHandler);
 

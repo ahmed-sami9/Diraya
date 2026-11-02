@@ -23,7 +23,7 @@ async function one<T>(sql: string, params: unknown[]): Promise<T> {
 async function newTeacher(name: string, groupCount = 1) {
   const { id } = await one<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `groups-repo-${name}-${Date.now()}@example.com`]
+    [name, `groups-repo-${name.toLowerCase()}-${Date.now()}@example.com`]
   );
   teacherIds.push(id);
 

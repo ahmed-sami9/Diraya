@@ -1,15 +1,14 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { z } from 'zod';
 
-// Validation middleware shared by every module that is not auth.
+// Validation middleware shared by every module.
 //
 // Each one checks part of the request against a zod schema. If it fails, the
 // request stops here with 400 and code INVALID_INPUT, so controllers and
 // services only ever see clean, typed data.
 //
 // The response always has a `code`, which is what the frontend's ApiError
-// reads. (auth.validation.ts predates this and sends no code; it can move to
-// these helpers later.)
+// reads.
 
 function sendInvalidInput(res: Response, message: string, issues: z.ZodError['issues']): void {
   res.status(400).json({

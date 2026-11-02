@@ -20,7 +20,7 @@ const teacherIds: string[] = [];
 async function newTeacher(name: string): Promise<string> {
   const result = await pool.query<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `notes-repo-${name}-${Date.now()}@example.com`]
+    [name, `notes-repo-${name.toLowerCase()}-${Date.now()}@example.com`]
   );
   const id = result.rows[0]!.id;
   teacherIds.push(id);

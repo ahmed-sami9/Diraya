@@ -46,7 +46,7 @@ async function request(
 
 // A teacher with one signed-in session. `kind` decides how they sign in.
 async function newTeacher(name: string, kind: 'password' | 'google' | 'demo' = 'password') {
-  const email = `account-api-${name}-${Date.now()}@example.com`;
+  const email = `account-api-${name.toLowerCase()}-${Date.now()}@example.com`;
   const hash = kind === 'password' ? await hashPassword(PASSWORD) : null;
 
   const { id } = (
@@ -181,7 +181,7 @@ describe('PATCH /teacher/account/profile', () => {
 
     const account = (await t.call('GET', '/teacher/account'))[1].account;
     assert.equal(account.name, 'Strict');
-    assert.equal(account.email.startsWith('account-api-Strict-'), true);
+    assert.equal(account.email.startsWith('account-api-strict-'), true);
   });
 
   it('only ever changes the signed-in teacher', async () => {

@@ -33,7 +33,7 @@ async function one<T>(sql: string, params: unknown[]): Promise<T> {
 async function newTeacher(name: string) {
   const { id } = await one<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `schedule-api-${name}-${Date.now()}@example.com`]
+    [name, `schedule-api-${name.toLowerCase()}-${Date.now()}@example.com`]
   );
   teacherIds.push(id);
 

@@ -34,7 +34,7 @@ async function newTeacher(name: string) {
   const { id } = (
     await pool.query<{ id: string }>(
       `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-      [name, `home-api-${name}-${Date.now()}@example.com`]
+      [name, `home-api-${name.toLowerCase()}-${Date.now()}@example.com`]
     )
   ).rows[0]!;
   teacherIds.push(id);
