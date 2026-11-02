@@ -15,6 +15,21 @@ export type GroupInput = z.infer<typeof groupInputSchema>;
 // Used by both create (POST) and rename (PATCH).
 export const validateGroupInput = validateBody(groupInputSchema, 'Invalid group data');
 
+// PUT /teacher/groups/:groupId/student-order: the group's students, every
+// one of them, in the new order. The whole list rather than "move X to 3",
+// so the server can check it matches the group exactly.
+export const studentOrderSchema = z.object({
+  studentIds: z
+    .array(z.string().regex(/^[1-9]\d{0,17}$/))
+    .min(1)
+    .max(500)
+    .refine((ids) => new Set(ids).size === ids.length, 'Each student once'),
+});
+
+export type StudentOrderInput = z.infer<typeof studentOrderSchema>;
+
+export const validateStudentOrder = validateBody(studentOrderSchema, 'Invalid student order');
+
 // PUT /teacher/groups/:groupId/schedule: the whole week, every time.
 // The same rules as the database, checked first so a mistake gets a clear
 // 400 instead of a database error. Times are 24-hour "HH:MM" in Egypt.
@@ -31,7 +46,8 @@ export const scheduleInputSchema = z
       .array(sessionSchema)
       .max(7)
       .refine(
-        (sessions) => new Set(sessions.map((session) => session.dayOfWeek)).size === sessions.length,
+        (sessions) =>
+          new Set(sessions.map((session) => session.dayOfWeek)).size === sessions.length,
         'Each day can appear only once'
       ),
   })

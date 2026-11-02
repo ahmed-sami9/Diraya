@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
+import { ApiError } from '../../../../api/apiClient';
 import type { GroupSummary } from '../../../../api/students/groups';
+import { formErrorClasses } from '../../../../components/formStyles';
 import ChevronRightIcon from '../../../../components/icons/ChevronRightIcon';
 import MoreHorizontalIcon from '../../../../components/icons/MoreHorizontalIcon';
 import PencilIcon from '../../../../components/icons/PencilIcon';
@@ -14,6 +16,7 @@ import SectionError from '../../../../components/SectionError';
 import { useDelayedFlag } from '../../../../hooks/useDelayedFlag';
 import { useGradePage } from '../../../../hooks/students/useGradePage';
 import { pluralize } from '../../../../utils/formatSession';
+import { sortStudents, type SortOrder } from '../../../../utils/studentOrder';
 
 import DeleteGradeDialog from '../components/DeleteGradeDialog';
 import GradeFormDialog from '../components/GradeFormDialog';
@@ -35,10 +38,6 @@ type DialogState =
   | { type: 'edit-grade' }
   | { type: 'delete-grade' }
   | null;
-
-type SortOrder = 'name' | 'newest' | 'code';
-
-const nameCompare = new Intl.Collator('en', { sensitivity: 'base' }).compare;
 
 // The route: /teacher/students/grades/:gradeId
 //
@@ -63,7 +62,9 @@ function GradePageContent({ gradeId }: { gradeId: string }) {
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<DialogState>(null);
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<SortOrder>('name');
+  // "My order" first: the teacher's own order, which they can drag to change.
+  const [sort, setSort] = useState<SortOrder>('custom');
+  const [reorderError, setReorderError] = useState<string | null>(null);
   // Read by screen readers after adding a student ("Omar Adel added as 26-0042").
   const [announcement, setAnnouncement] = useState('');
 
@@ -125,14 +126,29 @@ function GradePageContent({ gradeId }: { gradeId: string }) {
         )
       : inFilter;
 
-    return [...matches].sort((a, b) =>
-      sort === 'name'
-        ? nameCompare(a.name, b.name)
-        : sort === 'newest'
-          ? b.joinedAt.localeCompare(a.joinedAt)
-          : a.code.localeCompare(b.code)
+    return sortStudents(
+      matches,
+      sort,
+      groups.map((group) => group.id)
     );
-  }, [inFilter, query, sort]);
+  }, [inFilter, query, sort, groups]);
+
+  // Dragging needs "My order" (the other sorts aren't the saved order) and no
+  // search (a filtered list has gaps). Rows move within their own group.
+  const canReorder = sort === 'custom' && !query.trim();
+
+  const reorder = (groupId: string, orderedIds: string[]) => {
+    setReorderError(null);
+
+    page.reorderStudents(groupId, orderedIds).catch((error: unknown) => {
+      console.error(error);
+      setReorderError(
+        error instanceof ApiError && error.code === 'ORDER_OUT_OF_DATE'
+          ? 'This group changed since the page loaded, so the new order wasn’t saved. Reload to see the latest list.'
+          : 'Couldn’t save the new order. Check your connection and try again.'
+      );
+    });
+  };
 
   const closeDialog = () => setDialog(null);
 
@@ -256,6 +272,7 @@ function GradePageContent({ gradeId }: { gradeId: string }) {
                     onChange={(event) => setSort(event.target.value as SortOrder)}
                     className="h-10 cursor-pointer rounded-[10px] border border-border bg-surface px-2.5 text-[13px] font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
+                    <option value="custom">My order</option>
                     <option value="name">Name</option>
                     <option value="newest">Newest first</option>
                     <option value="code">Code</option>
@@ -310,10 +327,30 @@ function GradePageContent({ gradeId }: { gradeId: string }) {
                 text="Check the spelling, or search by their code."
               />
             ) : (
-              <StudentsTable
-                students={shown}
-                groupNames={groupNames}
-              />
+              <>
+                {reorderError && (
+                  <div
+                    role="alert"
+                    className={`${formErrorClasses} mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 sm:mx-5`}
+                  >
+                    {reorderError}
+                    <button
+                      type="button"
+                      onClick={page.reload}
+                      className="cursor-pointer rounded font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+                    >
+                      Reload
+                    </button>
+                  </div>
+                )}
+                <StudentsTable
+                  students={shown}
+                  groupNames={groupNames}
+                  onReorder={canReorder && shown.length > 1 ? reorder : undefined}
+                  // All students, grouped: a heading shows where each group starts.
+                  showGroupHeadings={sort === 'custom' && !filterGroupId && groups.length > 1}
+                />
+              </>
             )}
           </section>
         </>

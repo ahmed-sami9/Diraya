@@ -67,6 +67,8 @@ export type GradeStudentRow = {
   average_mark: number | null;
   // This month's fee status, by the payments page's own rules.
   payment_status: MonthStatus | null;
+  // The teacher's order within the group; null: not placed yet.
+  position: number | null;
 };
 
 // Only the columns the grade table shows. Phones and notes stay out of this
@@ -90,6 +92,7 @@ export async function findStudentsByGrade(
         s.full_name AS name,
         s.group_id::text AS group_id,
         s.created_at AS joined_at,
+        s.position,
         COALESCE(a.attended, 0) AS attended,
         COALESCE(a.total, 0) AS attendance_total,
         m.average AS average_mark,
@@ -143,7 +146,9 @@ export async function updateStudentDetails(
   const result = await pool.query(
     `
       UPDATE students s
-      SET full_name = $3, parent_phone = $4, phone = $5, group_id = $6
+      SET full_name = $3, parent_phone = $4, phone = $5, group_id = $6,
+        -- A new group: their place in the old one means nothing there.
+        position = CASE WHEN s.group_id = $6 THEN s.position END
       WHERE s.teacher_id = $1 AND s.id = $2
         AND EXISTS (
           SELECT 1 FROM groups g
@@ -303,10 +308,12 @@ export async function insertStudentWithCode(
     // (a server abroad could still be in "last year" on 1 January).
     const result = await client.query<GradeStudentRow>(
       `
-        INSERT INTO students (teacher_id, grade_id, group_id, full_name, parent_phone, phone, notes, code)
+        INSERT INTO students (teacher_id, grade_id, group_id, full_name, parent_phone, phone, notes, code, position)
         VALUES (
           $1, $2, $3, $4, $5, $6, $7,
-          to_char(NOW() AT TIME ZONE 'Africa/Cairo', 'YY') || '-' || lpad($8::text, 4, '0')
+          to_char(NOW() AT TIME ZONE 'Africa/Cairo', 'YY') || '-' || lpad($8::text, 4, '0'),
+          -- The end of a group the teacher has ordered; unplaced (NULL) if they haven't.
+          (SELECT MAX(position) + 1 FROM students WHERE group_id = $3)
         )
         RETURNING
           id::text AS id,
@@ -314,6 +321,7 @@ export async function insertStudentWithCode(
           full_name AS name,
           group_id::text AS group_id,
           created_at AS joined_at,
+          position,
           0 AS attended,
           0 AS attendance_total,
           NULL::float8 AS average_mark,

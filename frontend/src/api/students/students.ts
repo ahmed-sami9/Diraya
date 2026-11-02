@@ -67,6 +67,10 @@ export type GradeStudent = {
   // Average of their exam marks, as a %, 0-100.
   averageMark: number | null;
   paymentStatus: PaymentStatus | null;
+
+  // The teacher's order within their group (dragged on the grade page).
+  // null: not placed yet; they come after placed students, by name.
+  position: number | null;
 };
 
 // What the "Edit student" form sends. Phones are digits only, e.g. "01012345678".

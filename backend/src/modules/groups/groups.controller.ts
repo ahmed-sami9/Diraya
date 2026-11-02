@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 
 import { saveGroupSchedule } from './groups.schedule.service';
-import { createGroup, removeGroup, renameGroup } from './groups.service';
+import { createGroup, removeGroup, renameGroup, reorderStudents } from './groups.service';
 import type { DeleteGroupQuery } from './groups.validation';
 
 // HTTP <-> service only. req.user is always set: these routes sit behind
@@ -63,6 +63,21 @@ export async function deleteGroup(
     const { moveStudentsTo } = res.locals.query as DeleteGroupQuery;
 
     await removeGroup(req.user!.userId, req.params.groupId, moveStudentsTo);
+
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+}
+
+// PUT /teacher/groups/:groupId/student-order
+export async function putStudentOrder(
+  req: Request<{ groupId: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await reorderStudents(req.user!.userId, req.params.groupId, req.body);
 
     res.status(204).end();
   } catch (error) {

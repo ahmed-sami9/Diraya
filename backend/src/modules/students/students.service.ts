@@ -69,6 +69,9 @@ export type GradeStudent = {
   attendanceRate: number | null;
   averageMark: number | null;
   paymentStatus: PaymentStatus | null;
+  // The teacher's order within their group. null: not placed yet (they
+  // come after placed students, by name).
+  position: number | null;
 };
 
 // The mark is rounded here, like the profile's average, so both show the
@@ -83,6 +86,7 @@ function toGradeStudent(row: GradeStudentRow): GradeStudent {
     attendanceRate: toAttendanceRate(row.attended, row.attendance_total),
     averageMark: row.average_mark === null ? null : Math.round(row.average_mark),
     paymentStatus: row.payment_status,
+    position: row.position,
   };
 }
 

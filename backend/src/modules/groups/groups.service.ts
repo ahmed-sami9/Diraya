@@ -3,12 +3,13 @@ import { isForeignKeyViolation, isUniqueViolation } from '../../errors/pgErrors'
 import { GradeErrors } from '../grades/grades.errors';
 
 import { GroupErrors } from './groups.errors';
-import type { GroupInput } from './groups.validation';
+import type { GroupInput, StudentOrderInput } from './groups.validation';
 import {
   deleteGroupMovingStudents,
   findGroupsByGrade,
   findSchedulesByGroups,
   insertGroup,
+  saveStudentOrder,
   updateGroupName,
   type GroupRow,
   type ScheduleSlot,
@@ -136,4 +137,16 @@ export async function removeGroup(
     case 'target-not-found':
       throw GroupErrors.moveTargetNotFound();
   }
+}
+
+// PUT /teacher/groups/:groupId/student-order
+export async function reorderStudents(
+  teacherId: string,
+  groupId: string,
+  input: StudentOrderInput
+): Promise<void> {
+  const result = await saveStudentOrder(teacherId, groupId, input.studentIds);
+
+  if (result === 'group-not-found') throw GroupErrors.notFound();
+  if (result === 'out-of-date') throw GroupErrors.orderOutOfDate();
 }

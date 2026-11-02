@@ -39,6 +39,15 @@ export const GroupErrors = {
 
   // The group picked to receive the students is gone, is the same group, or
   // is in another grade.
+  // The order sent doesn't list exactly the group's students: one was
+  // added, moved or deleted since the page loaded.
+  orderOutOfDate: () =>
+    new AppError(
+      409,
+      'ORDER_OUT_OF_DATE',
+      'This group’s students changed since the page loaded. Reload and try again.'
+    ),
+
   moveTargetNotFound: () =>
     new AppError(404, 'MOVE_TARGET_NOT_FOUND', 'The group you picked no longer exists.'),
 };

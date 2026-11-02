@@ -13,6 +13,7 @@ import {
   deleteGroup,
   renameGroup,
   saveGroupSchedule,
+  saveStudentOrder,
   type GroupInput,
   type GroupSession,
   type GroupSummary,
@@ -23,6 +24,7 @@ import {
   type GradeStudent,
   type StudentInput,
 } from '../../api/students/students';
+import { withPositions } from '../../utils/studentOrder';
 
 // 'not-found': the grade was deleted, or the link is wrong. It gets its own
 // screen ("this grade doesn't exist"), not the "try again" error.
@@ -128,9 +130,38 @@ export function useGradePage(gradeId: string) {
     if (moveStudentsTo) {
       setStudents((previous) =>
         previous.map((student) =>
-          student.groupId === groupId ? { ...student, groupId: moveStudentsTo } : student
+          // Unplaced in the new group, like on the server.
+          student.groupId === groupId
+            ? { ...student, groupId: moveStudentsTo, position: null }
+            : student
         )
       );
+    }
+  }, []);
+
+  // Shows the new order at once, then saves it. If saving fails, the moved
+  // students go back to their old places and the error is thrown for the page.
+  const reorderStudents = useCallback(async (groupId: string, orderedIds: string[]) => {
+    const oldPositions = new Map<string, number | null>();
+
+    setStudents((previous) => {
+      for (const student of previous) {
+        if (student.groupId === groupId) oldPositions.set(student.id, student.position);
+      }
+      return withPositions(previous, orderedIds);
+    });
+
+    try {
+      await saveStudentOrder(groupId, orderedIds);
+    } catch (error) {
+      setStudents((previous) =>
+        previous.map((student) =>
+          oldPositions.has(student.id)
+            ? { ...student, position: oldPositions.get(student.id)! }
+            : student
+        )
+      );
+      throw error;
     }
   }, []);
 
@@ -158,6 +189,7 @@ export function useGradePage(gradeId: string) {
     editGroup,
     saveSchedule,
     removeGroup,
+    reorderStudents,
     addStudent,
   };
 }

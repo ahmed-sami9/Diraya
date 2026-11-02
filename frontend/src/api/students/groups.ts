@@ -78,6 +78,15 @@ export async function saveGroupSchedule(
   );
 }
 
+// The teacher's order of a group's students: every student in the group, in
+// the new order. ORDER_OUT_OF_DATE (409) if the group's students changed
+// since the page loaded.
+export async function saveStudentOrder(groupId: string, studentIds: string[]): Promise<void> {
+  await apiRequest<null>('PUT', `/teacher/groups/${encodeURIComponent(groupId)}/student-order`, {
+    body: { studentIds },
+  });
+}
+
 // moveStudentsTo: the group that receives this group's students. Needed only
 // when the group has students.
 export async function deleteGroup(groupId: string, moveStudentsTo: string | null): Promise<void> {

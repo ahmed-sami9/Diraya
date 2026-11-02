@@ -129,7 +129,8 @@ export async function deleteGroupMovingStudents(
 
       if (target.rowCount === 0) return await stop({ status: 'target-not-found' });
 
-      await client.query(`UPDATE students SET group_id = $1 WHERE group_id = $2`, [
+      // Unplaced in the new group: their old order belonged to the old one.
+      await client.query(`UPDATE students SET group_id = $1, position = NULL WHERE group_id = $2`, [
         moveToGroupId,
         groupId,
       ]);
@@ -169,6 +170,67 @@ const WEEK_ORDER = '(weekday + 1) % 7, start_time';
 
 // The timetables of several groups in one query (a grade page shows them all).
 // Groups that aren't this teacher's simply return nothing.
+/* ------------------------------ Student order ----------------------------- */
+
+export type SaveOrderResult = 'saved' | 'group-not-found' | 'out-of-date';
+
+// Saves the teacher's order: position 0, 1, 2... in the order given.
+//
+// The list must be exactly the group's students. One transaction: the group
+// row is locked, so a student added or moved at the same moment waits and
+// can't slip in between the check and the update.
+export async function saveStudentOrder(
+  teacherId: string,
+  groupId: string,
+  studentIds: string[]
+): Promise<SaveOrderResult> {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const group = await client.query(
+      'SELECT 1 FROM groups WHERE id = $1 AND teacher_id = $2 FOR UPDATE',
+      [groupId, teacherId]
+    );
+    if (group.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return 'group-not-found';
+    }
+
+    const current = await client.query<{ id: string }>(
+      'SELECT id::text AS id FROM students WHERE group_id = $1',
+      [groupId]
+    );
+    const sent = new Set(studentIds);
+    const matches =
+      current.rows.length === sent.size && current.rows.every((row) => sent.has(row.id));
+
+    if (!matches) {
+      await client.query('ROLLBACK');
+      return 'out-of-date';
+    }
+
+    await client.query(
+      `
+        UPDATE students s
+        SET position = o.ord - 1
+        FROM unnest($2::bigint[]) WITH ORDINALITY AS o (id, ord)
+        WHERE s.id = o.id AND s.group_id = $1
+      `,
+      [groupId, studentIds]
+    );
+
+    await client.query('COMMIT');
+    return 'saved';
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function findSchedulesByGroups(
   teacherId: string,
   groupIds: string[]
@@ -232,12 +294,7 @@ export async function replaceGroupSchedule(
         FROM unnest($3::smallint[], $4::time[]) AS slot(weekday, start_time)
         RETURNING weekday, to_char(start_time, 'HH24:MI') AS "startTime"
       `,
-      [
-        teacherId,
-        groupId,
-        slots.map((slot) => slot.weekday),
-        slots.map((slot) => slot.startTime),
-      ]
+      [teacherId, groupId, slots.map((slot) => slot.weekday), slots.map((slot) => slot.startTime)]
     );
 
     await client.query('COMMIT');
