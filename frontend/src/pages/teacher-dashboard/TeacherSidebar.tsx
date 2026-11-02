@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 import { LogoutIcon, CloseIcon } from '../../components/icons/index.ts';
@@ -40,6 +41,26 @@ function TeacherSidebar({
 }: TeacherSidebarProps) {
   const { pathname } = useLocation();
   const activeIndex = getActiveIndex(pathname);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Phone drawer: focus moves in when it opens, Escape closes it, and focus
+  // goes back to the menu button. Desktop never sets isOpen, so this stays idle.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [isOpen, onClose]);
 
   return (
     <aside
@@ -47,7 +68,6 @@ function TeacherSidebar({
         fixed inset-y-0 left-0 z-40
         flex w-64 flex-col gap-7
         bg-sidebar px-4 py-6
-        transition-[translate,visibility,box-shadow]
         will-change-transform
         motion-reduce:transition-none
 
@@ -55,8 +75,9 @@ function TeacherSidebar({
 
         ${
           isOpen
-            ? 'visible translate-x-0 shadow-2xl duration-300 ease-out'
-            : 'invisible -translate-x-full duration-200 ease-in'
+            ? // Visible at once on opening (so focus can move in); hidden only after sliding out.
+              'visible translate-x-0 shadow-2xl transition-[translate,box-shadow] duration-300 ease-out'
+            : 'invisible -translate-x-full transition-[translate,visibility,box-shadow] duration-200 ease-in'
         }
       `}
     >
@@ -81,6 +102,7 @@ function TeacherSidebar({
         </NavLink>
 
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           aria-label="Close menu"
