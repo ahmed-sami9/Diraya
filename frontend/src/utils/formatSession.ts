@@ -1,5 +1,5 @@
 // Turns the session times the server sends (ISO strings) into the short
-// labels shown on the grade cards, in the teacher's own time zone:
+// labels shown on the grade cards, on Egypt's clock (not the device's):
 //
 //   today     -> "Today, 8:00 pm"
 //   tomorrow  -> "Tomorrow, 4:00 pm"
@@ -10,18 +10,29 @@ const timeFormat = new Intl.DateTimeFormat('en-GB', {
   hour: 'numeric',
   minute: '2-digit',
   hour12: true,
+  timeZone: 'Africa/Cairo',
 });
 
 const dayFormat = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
+  timeZone: 'Africa/Cairo',
 });
 
-const isSameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() &&
-  a.getMonth() === b.getMonth() &&
-  a.getDate() === b.getDate();
+// "YYYY-MM-DD" in Cairo; ISO days compare correctly as strings.
+const cairoDay = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Africa/Cairo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function shiftDay(isoDay: string, days: number): string {
+  const date = new Date(`${isoDay}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 
 export type SessionLabel = {
   // "Today", "Tomorrow", "Yesterday" or "Thu 9 Oct".
@@ -33,20 +44,16 @@ export type SessionLabel = {
 
 export function getSessionLabel(isoDate: string, now: Date = new Date()): SessionLabel {
   const date = new Date(isoDate);
+  const sessionDay = cairoDay.format(date);
+  const today = cairoDay.format(now);
 
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-
-  const isToday = isSameDay(date, now);
+  const isToday = sessionDay === today;
 
   let day = dayFormat.format(date).replace(',', '');
 
   if (isToday) day = 'Today';
-  else if (isSameDay(date, tomorrow)) day = 'Tomorrow';
-  else if (isSameDay(date, yesterday)) day = 'Yesterday';
+  else if (sessionDay === shiftDay(today, 1)) day = 'Tomorrow';
+  else if (sessionDay === shiftDay(today, -1)) day = 'Yesterday';
 
   return { day, time: timeFormat.format(date), isToday };
 }
