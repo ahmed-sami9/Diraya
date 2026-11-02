@@ -1,0 +1,14 @@
+{
+  // Production build: compiles the server to plain JavaScript in dist/.
+  // `npm run build`, then `npm start` runs it with node (no tsx needed).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "sourceMap": true,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["server.ts", "src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/test/**"]
+}

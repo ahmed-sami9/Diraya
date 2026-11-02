@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
     "test": "tsx --env-file=.env.test --test --test-concurrency=1 \"src/**/*.test.ts\"",
     "migrate:test": "node-pg-migrate up --envPath .env.test",
     "dev": "nodemon --exec tsx server.ts",
@@ -17,6 +19,7 @@
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.1",
     "google-auth-library": "^11.1.0",
@@ -31,10 +34,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
-    "dotenv": "^17.4.2",
     "node-pg-migrate": "^9.0.0",
     "nodemon": "^3.1.14",
-    "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
