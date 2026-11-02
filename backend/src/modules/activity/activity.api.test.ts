@@ -47,7 +47,7 @@ async function one<T>(sql: string, params: unknown[]): Promise<T> {
 async function newTeacher(name: string) {
   const { id } = await one<{ id: string }>(
     `INSERT INTO teachers (full_name, email) VALUES ($1, $2) RETURNING id::text AS id`,
-    [name, `activity-api-${name}-${Date.now()}@example.com`]
+    [name, `activity-api-${name.toLowerCase()}-${Date.now()}@example.com`]
   );
   teacherIds.push(id);
 
@@ -274,7 +274,7 @@ describe('each action logs one entry with its facts', () => {
     });
   });
 
-  it('adding an exam, then entering marks: exam.added, marks.entered', async () => {
+  it('adding an exam, then entering marks: exam.added, marks.entered; fixing a mark adds nothing', async () => {
     const t = await newTeacher('Examiner');
     await one(
       `
@@ -308,6 +308,13 @@ describe('each action logs one entry with its facts', () => {
         ['marks.entered', { examId, title: 'Quiz 4', gradeName: 'Grade 1', entered: 1, total: 2 }],
       ]
     );
+
+    // Correcting that mark logs nothing new, like correcting an attendance sheet.
+    const [corrected] = await t.call('PUT', `/exams/${examId}/results`, {
+      results: [{ studentId: t.student, status: 'scored', score: 17 }],
+    });
+    assert.equal(corrected, 200);
+    assert.equal((await t.activity()).length, 2);
   });
 });
 
