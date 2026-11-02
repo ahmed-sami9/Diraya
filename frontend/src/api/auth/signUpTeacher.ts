@@ -1,3 +1,4 @@
+import { apiUrl } from '../apiClient';
 import { AuthError } from './authErrors';
 
 // What the server answers after creating the account. The teacher is NOT
@@ -14,7 +15,7 @@ export const signUpTeacher = async (credentials: {
   let res: Response;
 
   try {
-    res = await fetch('http://localhost:5000/api/v1/auth/signup', {
+    res = await fetch(`${apiUrl}/auth/signup`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

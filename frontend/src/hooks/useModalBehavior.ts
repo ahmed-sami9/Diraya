@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 
 type ModalBehaviorOptions = {
   // Called when the person presses Escape.
@@ -29,7 +29,9 @@ function useModalBehavior<T extends HTMLElement>({
   // Keep the latest callback in a ref so the effect below can run once and
   // still call the current function.
   const onRequestCloseRef = useRef(onRequestClose);
-  onRequestCloseRef.current = onRequestClose;
+  useLayoutEffect(() => {
+    onRequestCloseRef.current = onRequestClose;
+  });
 
   useEffect(() => {
     const previouslyFocused =

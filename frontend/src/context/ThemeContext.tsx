@@ -54,6 +54,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Kept beside its provider on purpose; fast refresh just reloads this file.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
 

@@ -1,4 +1,5 @@
 import type { User } from '../../context/AuthContext';
+import { apiUrl } from '../apiClient';
 import { AuthError } from './authErrors';
 
 type LoginCredentials = {
@@ -13,19 +14,27 @@ type LoginSuccessResponse = {
 };
 
 export const logInTeacher = async (credentials: LoginCredentials): Promise<User> => {
-  const res = await fetch('http://localhost:5000/api/v1/auth/login', {
-    method: 'POST',
+  let res: Response;
 
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  try {
+    res = await fetch(`${apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(credentials),
+    });
+  } catch {
+    // Offline or server down: fetch never returns a Response.
+    throw new AuthError(
+      'SERVER_ERROR',
+      "We can't reach the server right now. Check your connection and try again."
+    );
+  }
 
-    credentials: 'include',
-
-    body: JSON.stringify(credentials),
-  });
-
-  const data = await res.json();
+  // A proxy's HTML error page isn't JSON; fall back to the generic message.
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     throw new AuthError(

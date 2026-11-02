@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ComponentType,
@@ -247,7 +248,9 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
   // Mirror isBusy in a ref so the modal effect below can read the latest
   // value without listing it as a dependency.
   const isBusyRef = useRef(isBusy);
-  isBusyRef.current = isBusy;
+  useLayoutEffect(() => {
+    isBusyRef.current = isBusy;
+  });
 
   // Which kind of server error we're showing. "Email taken" goes under the
   // email field; every other error goes in the banner above the form, and

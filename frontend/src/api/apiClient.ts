@@ -9,7 +9,8 @@
 // the caller. Dashboard requests also need GET, PATCH and DELETE, and are
 // simpler to use when every failure is thrown as one error type (ApiError).
 
-const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
+// The API's base address for this build, e.g. https://api.example.com/api/v1.
+export const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
 
 const CONNECTION_ERROR = 'Could not reach the server. Please check your connection.';
 const SERVER_ERROR = 'Something went wrong on our side. Please try again.';

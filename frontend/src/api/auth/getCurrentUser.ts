@@ -1,11 +1,12 @@
 import type { User } from '../../context/AuthContext';
+import { apiUrl } from '../apiClient';
 
 type CurrentUserResponse = {
   user: User;
 };
 
 export async function getCurrentUser(signal?: AbortSignal): Promise<User | null> {
-  const response = await fetch('http://localhost:5000/api/v1/auth/me', {
+  const response = await fetch(`${apiUrl}/auth/me`, {
     method: 'GET',
     credentials: 'include',
     signal,

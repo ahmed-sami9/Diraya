@@ -45,7 +45,7 @@ export async function postJson<T = unknown>(
       throw error;
     }
 
-    throw new Error(CONNECTION_ERROR);
+    throw new Error(CONNECTION_ERROR, { cause: error });
   }
 
   const data = await response.json().catch(() => null);
