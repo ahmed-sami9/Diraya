@@ -14,10 +14,9 @@ export type TeacherAction = {
   to: string;
 };
 
-// Every action a teacher can start from a shortcut, defined ONCE.
-//
-// The navbar's main button and the Home page's quick actions both read from
-// this list, so a label or a destination changes in one place only.
+// Every action a teacher can start from a shortcut, defined ONCE: the Home
+// page's quick actions read from this list, so a label or a destination
+// changes in one place only.
 //
 // `satisfies` checks each entry against TeacherAction while keeping the exact
 // keys, so `teacherActions.addExam` autocompletes and a typo is an error.
@@ -50,7 +49,3 @@ export const teacherActions = {
     to: '/teacher/payments?record=1',
   },
 } satisfies Record<string, TeacherAction>;
-
-// The navbar button for any section that doesn't name its own action.
-// Attendance is what a teacher does most, so it is the safe default.
-export const DEFAULT_PRIMARY_ACTION: TeacherAction = teacherActions.takeAttendance;
