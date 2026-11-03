@@ -19,19 +19,19 @@ const SIGN_UP_DELAY_MS = 400;
 
 // Shared by the two text links at the bottom ("Sign Up" and "Try the demo").
 const textLinkClasses = `
-  text-[#3431E4]
+  text-primary
   font-semibold
 
   cursor-pointer
   transition-colors
 
-  hover:text-[#2926C2]
+  hover:text-primary-hover
   hover:underline
 
   focus-visible:outline-none
   focus-visible:ring-2
-  focus-visible:ring-[#3431E4]
-  focus-visible:ring-offset-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
   rounded-sm
 
@@ -134,9 +134,9 @@ function SignInAlternatives({
     >
       {/* Divider */}
       <div className="w-full flex items-center gap-3">
-        <div className="h-px flex-1 bg-gray-300" />
-        <span className="text-sm text-gray-400">or</span>
-        <div className="h-px flex-1 bg-gray-300" />
+        <div className="h-px flex-1 bg-border-strong" />
+        <span className="text-sm text-ink-muted">or</span>
+        <div className="h-px flex-1 bg-border-strong" />
       </div>
 
       {/* Google */}
@@ -149,7 +149,7 @@ function SignInAlternatives({
       />
 
       {/* Sign up */}
-      <p className="mx-auto mt-5 text-sm font-medium text-gray-500 tall:mt-7">
+      <p className="mx-auto mt-5 text-sm font-medium text-ink-muted tall:mt-7">
         Don't have an account?{' '}
         <button
           type="button"
@@ -165,7 +165,7 @@ function SignInAlternatives({
       </p>
 
       {/* Demo */}
-      <p className="mx-auto mt-4 text-sm font-medium text-gray-500">
+      <p className="mx-auto mt-4 text-sm font-medium text-ink-muted">
         Just looking around?{' '}
         <button
           type="button"
@@ -187,7 +187,7 @@ function SignInAlternatives({
       {demoError && (
         <p
           role="alert"
-          className="mx-auto mt-3 text-xs font-medium text-red-600"
+          className="mx-auto mt-3 text-xs font-medium text-danger"
         >
           {demoError}
         </p>

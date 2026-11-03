@@ -158,7 +158,7 @@ function SignUpField({
   return (
     <div className="w-full">
       <div className="relative">
-        <Icon className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400" />
+        <Icon className="absolute top-1/2 left-4 -translate-y-1/2 text-ink-muted" />
 
         <input
           {...inputProps}
@@ -172,11 +172,11 @@ function SignUpField({
             w-full h-[52px]
             pl-12 ${isPassword ? 'pr-12' : ''}
             border rounded-lg
-            shadow-sm shadow-gray-200
-            placeholder:text-gray-400
+            shadow-sm shadow-ink/5
+            placeholder:text-ink-muted
             focus:outline-none focus:ring-2
-            disabled:bg-gray-50 disabled:cursor-not-allowed
-            ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'}
+            disabled:bg-surface-hover disabled:cursor-not-allowed
+            ${hasError ? 'border-danger focus:ring-danger' : 'border-border focus:ring-primary'}
           `}
         />
 
@@ -190,7 +190,7 @@ function SignUpField({
             className="
               absolute top-1/2 right-4
               -translate-y-1/2
-              text-gray-400
+              text-ink-muted
               cursor-pointer
               disabled:cursor-not-allowed
             "
@@ -204,7 +204,7 @@ function SignUpField({
         <p
           id={errorId}
           role={errorRole}
-          className="text-xs text-red-500 mt-1 pl-1"
+          className="text-xs text-danger mt-1 pl-1"
         >
           {error}
         </p>
@@ -503,7 +503,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
         <button
           type="button"
           onClick={handleSwitchToSignIn}
-          className="font-semibold text-[#3431E4] hover:underline cursor-pointer"
+          className="font-semibold text-primary hover:underline cursor-pointer"
         >
           Sign in instead
         </button>
@@ -529,7 +529,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
           w-full max-w-[520px] max-h-[90vh] relative
           flex flex-col
           overflow-y-auto
-          bg-white
+          bg-surface
           rounded-lg
           shadow-xl
           px-8 py-8
@@ -544,9 +544,9 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
           aria-label="Close sign up form"
           className="
             absolute top-6 right-6
-            text-gray-400
+            text-ink-muted
             transition-colors
-            hover:text-gray-600
+            hover:text-ink-secondary
             disabled:opacity-40
             disabled:cursor-not-allowed
           "
@@ -562,8 +562,8 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
                 flex items-center justify-center
                 w-14 h-14
                 rounded-full
-                bg-indigo-50
-                text-[#3431E4]
+                bg-primary-tint
+                text-primary
               "
             >
               <MailIcon className="w-7 h-7" />
@@ -571,20 +571,20 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
 
             <h2
               id="signup-title"
-              className="mt-4 text-2xl font-bold text-slate-800"
+              className="mt-4 text-2xl font-bold text-ink"
             >
               Confirm your email
             </h2>
 
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
               We sent a link to{' '}
-              <span className="font-semibold text-slate-800 break-all">{pendingEmail}</span>. Click
+              <span className="font-semibold text-ink break-all">{pendingEmail}</span>. Click
               it to finish creating your account and go to your dashboard. The link expires in 24
               hours.
             </p>
 
             <p
-              className="mt-5 text-sm text-gray-600"
+              className="mt-5 text-sm text-ink-secondary"
               aria-live="polite"
             >
               {resendStatus === 'sent' ? 'A new email is on its way. ' : "Didn't get it? Check your spam folder, or "}
@@ -594,7 +594,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
                 disabled={resendCooldown > 0 || resendStatus === 'sending'}
                 className="
                   font-semibold
-                  text-[#3431E4]
+                  text-primary
                   cursor-pointer
                   rounded-sm
 
@@ -602,10 +602,10 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
 
                   focus-visible:outline-none
                   focus-visible:ring-2
-                  focus-visible:ring-[#3431E4]
-                  focus-visible:ring-offset-2
+                  focus-visible:ring-primary
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
-                  disabled:text-gray-400
+                  disabled:text-ink-muted
                   disabled:cursor-not-allowed
                   disabled:no-underline
                 "
@@ -621,7 +621,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
             {resendError && (
               <p
                 role="alert"
-                className="mt-2 text-xs font-medium text-red-600"
+                className="mt-2 text-xs font-medium text-danger"
               >
                 {resendError}
               </p>
@@ -638,22 +638,22 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
 
                 text-sm
                 font-semibold
-                text-slate-800
+                text-ink
 
-                bg-white
-                border border-gray-300
+                bg-surface
+                border border-border-strong
                 rounded-md
 
                 cursor-pointer
                 transition-colors
 
-                hover:bg-gray-50
-                hover:border-gray-400
+                hover:bg-surface-hover
+                hover:border-ink-muted/50
 
                 focus-visible:outline-none
                 focus-visible:ring-2
-                focus-visible:ring-[#3431E4]
-                focus-visible:ring-offset-2
+                focus-visible:ring-primary
+                focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
                 xl:h-[46px]
               "
@@ -667,12 +667,12 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
             {/* Heading */}
             <h2
               id="signup-title"
-              className="text-2xl font-bold text-slate-800"
+              className="text-2xl font-bold text-ink"
             >
               Create your account
             </h2>
 
-            <p className="text-sm text-[#878383] mt-2">
+            <p className="text-sm text-ink-muted mt-2">
               Join Diraya and start managing your classes with ease.
             </p>
 
@@ -684,11 +684,11 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
                 className="
                   flex items-start gap-2.5
                   mt-5 px-4 py-3
-                  bg-red-50 border border-red-200 rounded-lg
-                  text-sm text-red-700
+                  bg-danger-tint border border-danger/30 rounded-lg
+                  text-sm text-danger
                 "
               >
-                <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+                <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-danger" />
 
                 <div className="flex-1">
                   <span>{bannerError.message}</span>
@@ -781,13 +781,13 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
                   w-full h-[50px]
                   flex items-center justify-center gap-2
                   text-center
-                  bg-blue-600
+                  bg-primary-solid
                   text-white text-sm font-medium
                   rounded-md
                   px-6 py-2
                   mt-2
                   transition-colors
-                  hover:bg-blue-700
+                  hover:bg-primary-hover
                   cursor-pointer
                   disabled:cursor-not-allowed
                   disabled:opacity-80
@@ -807,9 +807,9 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
 
             {/* Divider */}
             <div className="flex items-center gap-2 my-5">
-              <hr className="flex-1 border-gray-200" />
-              <span className="text-sm text-gray-400">or</span>
-              <hr className="flex-1 border-gray-200" />
+              <hr className="flex-1 border-border" />
+              <span className="text-sm text-ink-muted">or</span>
+              <hr className="flex-1 border-border" />
             </div>
 
             {/* Google */}
@@ -824,21 +824,21 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
             {googleError && (
               <p
                 role="alert"
-                className="text-xs font-medium text-red-600 text-center mt-3"
+                className="text-xs font-medium text-danger text-center mt-3"
               >
                 {googleError}
               </p>
             )}
 
             {/* Sign in */}
-            <p className="text-sm font-medium text-[#7A7A7A] text-center mt-6">
+            <p className="text-sm font-medium text-ink-muted text-center mt-6">
               Already have an account?{' '}
               <button
                 type="button"
                 onClick={handleSwitchToSignIn}
                 disabled={isBusy}
                 className="
-                  text-[#3431E4]
+                  text-primary
                   hover:underline
                   disabled:opacity-60
                   disabled:cursor-not-allowed
@@ -850,7 +850,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
             </p>
 
             {/* Demo */}
-            <p className="text-sm font-medium text-[#7A7A7A] text-center mt-4">
+            <p className="text-sm font-medium text-ink-muted text-center mt-4">
               Just looking around?{' '}
               <button
                 type="button"
@@ -860,7 +860,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
                   group
                   inline-flex items-center gap-1
 
-                  text-[#3431E4]
+                  text-primary
 
                   cursor-pointer
 
@@ -868,8 +868,8 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
 
                   focus-visible:outline-none
                   focus-visible:ring-2
-                  focus-visible:ring-[#3431E4]
-                  focus-visible:ring-offset-2
+                  focus-visible:ring-primary
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
                   rounded-sm
 
@@ -907,7 +907,7 @@ const SignUpModal = ({ isOpen, onClose, onSwitchToSignIn, onAuthSuccess }: SignU
             {demoError && (
               <p
                 role="alert"
-                className="text-xs font-medium text-red-600 text-center mt-3"
+                className="text-xs font-medium text-danger text-center mt-3"
               >
                 {demoError}
               </p>

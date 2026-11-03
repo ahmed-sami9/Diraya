@@ -8,6 +8,7 @@ import ForgotPasswordModal from './components/ForgotPasswordModal';
 import DirayaLogo from './components/DirayaLogo';
 
 import CloseIcon from '../../components/icons/CloseIcon';
+import ThemeToggle from '../../components/ThemeToggle';
 
 import { useAuth, type User } from '../../context/AuthContext';
 
@@ -121,7 +122,7 @@ const TeacherSignIn = () => {
         flex-col
         items-center
 
-        bg-white
+        bg-surface
         pb-5
 
         overflow-x-hidden
@@ -129,7 +130,7 @@ const TeacherSignIn = () => {
         lg:min-h-screen
         lg:flex-row
         lg:items-stretch
-        lg:bg-[#EEEFFE]
+        lg:bg-primary-tint
         lg:pb-0
         lg:overflow-x-visible
       "
@@ -156,57 +157,73 @@ const TeacherSignIn = () => {
       >
         <DirayaLogo />
 
-        {/* Form open: X closes it. Form closed: a labelled button opens it. */}
-        <button
-          type="button"
-          onClick={isLoggingIn ? closeLogin : openLogin}
-          aria-label={isLoggingIn ? 'Close sign-in form' : undefined}
-          aria-expanded={isLoggingIn}
-          className={`
+        {/* Top-right controls: the theme switch on every screen, plus the
+            small-screen sign-in toggle beside it */}
+        <div
+          className="
             absolute
             top-7
             right-5
             z-20
 
-            h-10
-
             flex
             items-center
-            justify-center
-
-            rounded-md
-
-            cursor-pointer
-
-            transition-colors
-            duration-200
-
-            focus-visible:outline-none
-            focus-visible:ring-2
-            focus-visible:ring-[#3431E4]
+            gap-2
 
             sm:right-[calc(50%-268px)]
             md:right-[max(2.5rem,calc(50%-350px))]
 
-            lg:hidden
-
-            ${
-              isLoggingIn
-                ? 'w-10 hover:bg-gray-100'
-                : `
-                  px-4
-                  border
-                  border-[#3431E4]
-                  text-sm
-                  font-semibold
-                  text-[#3431E4]
-                  hover:bg-indigo-50
-                `
-            }
-          `}
+            lg:top-9
+            lg:right-8
+            xl:right-10
+          "
         >
-          {isLoggingIn ? <CloseIcon /> : 'Sign In'}
-        </button>
+          <ThemeToggle />
+
+          {/* Form open: X closes it. Form closed: a labelled button opens it. */}
+          <button
+            type="button"
+            onClick={isLoggingIn ? closeLogin : openLogin}
+            aria-label={isLoggingIn ? 'Close sign-in form' : undefined}
+            aria-expanded={isLoggingIn}
+            className={`
+              h-10
+
+              flex
+              items-center
+              justify-center
+
+              rounded-md
+
+              cursor-pointer
+
+              transition-colors
+              duration-200
+
+              focus-visible:outline-none
+              focus-visible:ring-2
+              focus-visible:ring-primary
+
+              lg:hidden
+
+              ${
+                isLoggingIn
+                  ? 'w-10 hover:bg-surface-hover'
+                  : `
+                    px-4
+                    border
+                    border-primary
+                    text-sm
+                    font-semibold
+                    text-primary
+                    hover:bg-primary-tint
+                  `
+              }
+            `}
+          >
+            {isLoggingIn ? <CloseIcon /> : 'Sign In'}
+          </button>
+        </div>
       </div>
 
       <SignInLeftSection

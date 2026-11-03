@@ -45,8 +45,8 @@ const ctaBaseClasses = `
 
   focus-visible:outline-none
   focus-visible:ring-2
-  focus-visible:ring-[#3431E4]
-  focus-visible:ring-offset-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 `;
 
 const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionProps) => {
@@ -75,13 +75,13 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
             ? `
               mt-10
               pt-11
-              bg-[#F7F7FF]
+              bg-page
               rounded-t-[32px]
             `
             : `
               mt-0
               pt-4
-              bg-white
+              bg-surface
               rounded-none
               sm:pt-5
               md:pt-6
@@ -102,7 +102,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
         lg:pt-7
         lg:pb-6
         lg:gap-y-6
-        lg:bg-[#EEEFFE]
+        lg:bg-primary-tint
         lg:rounded-none
 
         xl:w-[64%]
@@ -128,7 +128,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
             h-1
 
             rounded-full
-            bg-[#D7D8F8]
+            bg-border-strong
 
             lg:hidden
           "
@@ -158,7 +158,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
             font-bold
             leading-[1.17]
 
-            text-slate-950
+            text-ink
 
             sm:text-[27px]
             md:text-3xl
@@ -168,7 +168,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
         >
           Everything you need,
           <br />
-          in one <span className="text-[#312FC1]">smart workspace</span>
+          in one <span className="text-primary-hover">smart workspace</span>
         </h2>
 
         <p
@@ -181,7 +181,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
             text-[14px]
             font-medium
             leading-relaxed
-            text-[#81818D]
+            text-ink-muted
 
             sm:max-w-[520px]
             md:max-w-[600px]
@@ -217,12 +217,12 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
               className={`
                 ${ctaBaseClasses}
 
-                bg-[#3431E4]
+                bg-primary-solid
                 text-white
 
                 shadow-sm
 
-                hover:bg-[#2926C2]
+                hover:bg-primary-hover
               `}
             >
               Sign In
@@ -234,14 +234,14 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
               className={`
                 ${ctaBaseClasses}
 
-                bg-white
-                text-slate-800
+                bg-surface
+                text-ink
 
                 border
-                border-gray-300
+                border-border-strong
 
-                hover:bg-gray-50
-                hover:border-gray-400
+                hover:bg-surface-hover
+                hover:border-ink-muted/50
               `}
             >
               Create account
@@ -280,6 +280,8 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
           className="
             object-contain
             select-none
+
+            dark:brightness-[0.85]
 
             w-[108%]
             max-w-[520px]
@@ -324,7 +326,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
           lg:max-w-none
           lg:mt-3
           lg:border-t
-          lg:border-indigo-200/50
+          lg:border-primary/15
           lg:px-0
           lg:pt-6
           lg:pb-2
@@ -335,7 +337,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
           xl:mt-0
           xl:gap-0
           xl:divide-x
-          xl:divide-indigo-200/50
+          xl:divide-primary/15
           xl:[&>*]:px-5
         "
       >

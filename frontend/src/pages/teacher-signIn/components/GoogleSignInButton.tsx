@@ -72,33 +72,33 @@ function GoogleSignInButton({
 
         text-sm
         font-semibold
-        text-slate-800
+        text-ink
 
-        bg-white
+        bg-surface
 
-        border border-gray-300
+        border border-border-strong
         rounded-md
 
-        shadow-sm shadow-gray-200
+        shadow-sm shadow-ink/5
 
         cursor-pointer
         transition-all duration-200
 
-        hover:bg-gray-50
-        hover:border-gray-400
+        hover:bg-surface-hover
+        hover:border-ink-muted/50
         hover:shadow-md
 
         active:scale-[0.995]
 
         focus-visible:outline-none
         focus-visible:ring-2
-        focus-visible:ring-[#3431E4]
-        focus-visible:ring-offset-2
+        focus-visible:ring-primary
+        focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
         disabled:cursor-not-allowed
         disabled:opacity-60
-        disabled:hover:bg-white
-        disabled:hover:border-gray-300
+        disabled:hover:bg-surface
+        disabled:hover:border-border-strong
         disabled:hover:shadow-sm
 
         xl:h-[46px]

@@ -34,6 +34,12 @@ type AuthContextType = {
   retryAuthCheck: () => Promise<boolean>;
 
   logout: () => Promise<void>;
+
+  // True right after the teacher clicked "Sign out" in this tab. The route
+  // guard then sends them to sign-in WITHOUT remembering the page they were
+  // on, so the next sign-in starts at home. An expired session still
+  // remembers it, so the teacher lands back where they were.
+  signedOutByUser: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -42,7 +48,15 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const AUTH_CHANNEL_NAME = 'diraya-auth';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = React.useState<User | null>(null);
+  const [user, setUserState] = React.useState<User | null>(null);
+
+  const [signedOutByUser, setSignedOutByUser] = React.useState(false);
+
+  // Every other change to the user (sign-in, a server re-check) clears the flag.
+  const setUser: Dispatch<SetStateAction<User | null>> = (value) => {
+    setSignedOutByUser(false);
+    setUserState(value);
+  };
 
   const [isAuthChecking, setIsAuthChecking] = React.useState(true);
 
@@ -63,7 +77,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     confirmedUserId.current = currentUser?.id ?? null;
 
     // Keep the same object when nothing changed, so the app doesn't re-render.
-    setUser((previous) => (previous?.id === currentUser?.id ? previous : currentUser));
+    setSignedOutByUser(false);
+    setUserState((previous) => (previous?.id === currentUser?.id ? previous : currentUser));
 
     // The server answered, so any earlier "couldn't reach it" is over. This
     // also lets the background re-checks below recover by themselves.
@@ -188,7 +203,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // shared computer).
     await logoutRequest();
 
-    setUser(null);
+    // Both in one render, so the route guard sees the flag with the null user.
+    setSignedOutByUser(true);
+    setUserState(null);
   };
 
   return (
@@ -200,6 +217,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         authCheckError,
         retryAuthCheck,
         logout,
+        signedOutByUser,
       }}
     >
       {children}

@@ -6,7 +6,7 @@ export const primaryButtonClasses = `
   flex items-center justify-center gap-2
   px-6
 
-  bg-[#3431E4]
+  bg-primary-solid
   text-white
   text-sm
   font-semibold
@@ -17,19 +17,19 @@ export const primaryButtonClasses = `
   cursor-pointer
   transition-all duration-200
 
-  hover:bg-[#2926C2]
+  hover:bg-primary-hover
   hover:shadow-md
 
   active:scale-[0.995]
 
   focus-visible:outline-none
   focus-visible:ring-2
-  focus-visible:ring-[#3431E4]
-  focus-visible:ring-offset-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
   disabled:cursor-not-allowed
   disabled:opacity-80
-  disabled:hover:bg-[#3431E4]
+  disabled:hover:bg-primary-solid
   disabled:hover:shadow-sm
 
   xl:h-[46px]
@@ -38,17 +38,17 @@ export const primaryButtonClasses = `
 export const textLinkClasses = `
   text-sm
   font-semibold
-  text-[#3431E4]
+  text-primary
 
   transition-colors
 
-  hover:text-[#2926C2]
+  hover:text-primary-hover
   hover:underline
 
   focus-visible:outline-none
   focus-visible:ring-2
-  focus-visible:ring-[#3431E4]
-  focus-visible:ring-offset-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
   rounded-sm
 `;

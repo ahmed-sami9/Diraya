@@ -19,8 +19,8 @@ interface AuthTextFieldProps
 // state is never overridden by the default hover or focus colours.
 const fieldStateClasses = (hasError: boolean) =>
   hasError
-    ? 'border-red-500 focus:border-red-500 focus:ring-red-100'
-    : 'border-gray-200 hover:border-gray-300 focus:border-[#3431E4] focus:ring-indigo-100';
+    ? 'border-danger focus:border-danger focus:ring-danger-tint'
+    : 'border-border hover:border-border-strong focus:border-primary focus:ring-primary-tint';
 
 // One labelled input with a leading icon and an error message underneath.
 // With type="password" it also renders its own show/hide toggle.
@@ -71,16 +71,16 @@ function AuthTextField({
             w-full h-[50px]
             pl-14 ${isPassword ? 'pr-12' : 'pr-4'}
             border rounded-md
-            bg-white
-            shadow-sm shadow-gray-200
-            text-sm text-slate-800
-            placeholder:text-gray-400
+            bg-surface
+            shadow-sm shadow-ink/5
+            text-sm text-ink
+            placeholder:text-ink-muted
             outline-none
             transition-all duration-200
 
             focus:ring-2
 
-            disabled:bg-gray-50
+            disabled:bg-surface-hover
             disabled:cursor-not-allowed
 
             xl:h-[46px]
@@ -107,11 +107,11 @@ function AuthTextField({
               rounded-md
               transition-colors
 
-              hover:bg-gray-100
+              hover:bg-surface-hover
 
               focus-visible:outline-none
               focus-visible:ring-2
-              focus-visible:ring-[#3431E4]
+              focus-visible:ring-primary
 
               disabled:cursor-not-allowed
             "
@@ -124,7 +124,7 @@ function AuthTextField({
       {error && (
         <p
           id={errorId}
-          className="text-xs text-red-500 mt-1.5 pl-1"
+          className="text-xs text-danger mt-1.5 pl-1"
         >
           {error}
         </p>

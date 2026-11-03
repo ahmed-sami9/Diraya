@@ -22,7 +22,7 @@ export type NavItem = {
 //
 // Add a page here and in App.tsx.
 export const navItems: NavItem[] = [
-  { to: '/teacher', label: 'Home', icon: HomeIcon, end: true },
+  { to: '/teacher', label: 'Overview', icon: HomeIcon, end: true },
   { to: '/teacher/students', label: 'Students', icon: StudentsIcon, end: false },
   { to: '/teacher/exams', label: 'Exams & Marks', icon: ExamsIcon, end: false },
   { to: '/teacher/payments', label: 'Payments', icon: PaymentsIcon, end: false },

@@ -9,15 +9,22 @@ function DirayaLogo() {
     xl:left-10
   "
     >
+      {/* The blue logo on light backgrounds, the white one on dark. */}
       <img
         src="/diraya-logo-dark.png"
         alt="Diraya logo"
-        className="w-auto h-auto"
+        className="w-10 h-auto dark:hidden"
+      />
+      <img
+        src="/diraya-logo-light.png"
+        alt="Diraya logo"
+        className="hidden w-10 h-auto dark:block"
       />
 
       <div className="flex flex-col gap-1">
         <span className="text-[28px] font-bold leading-none">Diraya</span>
-        <span className="text-sm text-[#949494] leading-none">Educational Management System</span>
+        {/* Phones hide it: the top-right buttons need the room, and the headline says what Diraya is */}
+        <span className="hidden text-sm text-ink-muted leading-none sm:block">Educational Management System</span>
       </div>
     </div>
   );

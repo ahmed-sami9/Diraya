@@ -307,7 +307,7 @@ function SignInLeftSection({
         lg:px-6
         lg:pt-20
         lg:pb-8
-        lg:bg-white
+        lg:bg-surface
         lg:rounded-3xl
         lg:shadow-lg
         lg:ml-4
@@ -378,7 +378,7 @@ function SignInLeftSection({
               leading-tight
               text-center
 
-              text-slate-800
+              text-ink
               sm:text-3xl
               lg:mt-0
               lg:text-4xl
@@ -388,7 +388,7 @@ function SignInLeftSection({
             {hasVisited ? 'Welcome back!' : 'Welcome to Diraya!'}
           </h1>
 
-          <p className="mt-2 text-sm font-medium text-center text-gray-500 lg:text-[15px] lg:text-left">
+          <p className="mt-2 text-sm font-medium text-center text-ink-muted lg:text-[15px] lg:text-left">
             {hasVisited
               ? 'Sign in to continue to your account'
               : 'Sign in to your account, or create one to get started.'}
@@ -405,17 +405,17 @@ function SignInLeftSection({
               flex items-start
               gap-2.5
               px-4 py-3
-              bg-emerald-50
-              border border-emerald-200
+              bg-success-tint
+              border border-success/30
               rounded-lg
               text-sm
-              text-emerald-800
+              text-success
 
               md:w-[90%]
               md:mx-auto
             "
           >
-            <CheckCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600" />
+            <CheckCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-success" />
             <span>{notice}</span>
           </div>
         )}
@@ -430,17 +430,17 @@ function SignInLeftSection({
               flex items-start
               gap-2.5
               px-4 py-3
-              bg-red-50
-              border border-red-200
+              bg-danger-tint
+              border border-danger/30
               rounded-lg
               text-sm
-              text-red-700
+              text-danger
 
               md:w-[90%]
               md:mx-auto
             "
           >
-            <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+            <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-danger" />
 
             <div className="flex-1">
               <span>{loginError}</span>
@@ -468,7 +468,7 @@ function SignInLeftSection({
 
                       focus-visible:outline-none
                       focus-visible:ring-2
-                      focus-visible:ring-red-400
+                      focus-visible:ring-danger
 
                       disabled:cursor-not-allowed
                       disabled:opacity-60
@@ -541,7 +541,7 @@ function SignInLeftSection({
                   className="
                     w-4 h-4
                     mr-2
-                    accent-[#3431E4]
+                    accent-primary-solid
                     cursor-pointer
                     disabled:cursor-not-allowed
                   "
@@ -549,7 +549,7 @@ function SignInLeftSection({
 
                 <label
                   htmlFor="remember-me"
-                  className="font-medium text-gray-700 cursor-pointer"
+                  className="font-medium text-ink cursor-pointer"
                 >
                   Remember me
                 </label>
@@ -562,19 +562,19 @@ function SignInLeftSection({
                 onClick={() => onForgotPassword(email)}
                 disabled={isBusy}
                 className="
-                  text-[#3431E4]
+                  text-primary
                   font-medium
 
                   cursor-pointer
                   transition-colors
 
-                  hover:text-[#2926C2]
+                  hover:text-primary-hover
                   hover:underline
 
                   focus-visible:outline-none
                   focus-visible:ring-2
-                  focus-visible:ring-[#3431E4]
-                  focus-visible:ring-offset-2
+                  focus-visible:ring-primary
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
                   rounded-sm
 
@@ -597,7 +597,7 @@ function SignInLeftSection({
                 flex items-center justify-center gap-2
                 px-6
 
-                bg-[#3431E4]
+                bg-primary-solid
                 text-white
                 text-sm
                 font-semibold
@@ -607,19 +607,19 @@ function SignInLeftSection({
 
                 transition-all duration-200
 
-                hover:bg-[#2926C2]
+                hover:bg-primary-hover
                 hover:shadow-md
 
                 active:scale-[0.995]
 
                 focus-visible:outline-none
                 focus-visible:ring-2
-                focus-visible:ring-[#3431E4]
-                focus-visible:ring-offset-2
+                focus-visible:ring-primary
+                focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
                 disabled:cursor-not-allowed
                 disabled:opacity-80
-                disabled:hover:bg-[#3431E4]
+                disabled:hover:bg-primary-solid
                 disabled:hover:shadow-sm
 
                 xl:h-[46px]

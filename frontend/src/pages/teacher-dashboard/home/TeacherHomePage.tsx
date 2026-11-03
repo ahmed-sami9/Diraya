@@ -13,7 +13,7 @@ import ExamsIcon from '../../../components/icons/ExamsIcon';
 import PaymentsIcon from '../../../components/icons/PaymentsIcon';
 
 import SummaryTile from './components/SummaryTile';
-import GettingStartedCard from './components/GettingStartedCard';
+import GettingStartedCard, { type SetupDone } from './components/GettingStartedCard';
 import QuickActions from './components/QuickActions';
 import TodayScheduleCard from './components/TodayScheduleCard';
 import UpcomingExamsCard from './components/UpcomingExamsCard';
@@ -129,10 +129,22 @@ function TeacherHomePage() {
   const payments = usePaymentsOverview(currentMonth());
   const overdue = overdueTile(payments.state);
 
+  // The setup card only while a step is left, and only once all three are
+  // known: a teacher who's done never sees it flash in while the page loads.
+  const setup: SetupDone | null =
+    state.status === 'ready' && exams.state.status === 'ready' && payments.state.status === 'ready'
+      ? {
+          students: state.summary.students.total > 0,
+          exam: exams.state.exams.length > 0,
+          payment: payments.state.overview.hasAnyPayment,
+        }
+      : null;
+  const showSetup = setup !== null && !(setup.students && setup.exam && setup.payment);
+
   return (
     <div className="flex flex-col gap-6">
       {/* The visible greeting lives in the navbar; this names the page for screen readers. */}
-      <h1 className="sr-only">Home</h1>
+      <h1 className="sr-only">Overview</h1>
 
       <section
         aria-label="Summary"
@@ -171,7 +183,7 @@ function TeacherHomePage() {
       <div className="grid items-start gap-6 xl:grid-cols-3">
         {/* Main column */}
         <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
-          <GettingStartedCard />
+          {showSetup && <GettingStartedCard done={setup} />}
 
           <TodayScheduleCard state={state} onRetry={reload} />
 

@@ -168,8 +168,8 @@ function TeacherResetPassword() {
           role="status"
           className="flex flex-col items-center gap-4 py-10"
         >
-          <div className="w-10 h-10 rounded-full border-4 border-gray-200 border-t-[#3431E4] animate-spin" />
-          <p className="text-sm font-medium text-gray-500">Checking your reset link...</p>
+          <div className="w-10 h-10 rounded-full border-4 border-border border-t-[#3431E4] animate-spin" />
+          <p className="text-sm font-medium text-ink-muted">Checking your reset link...</p>
         </div>
       </AuthPageShell>
     );
@@ -185,18 +185,18 @@ function TeacherResetPassword() {
             flex items-center justify-center
             w-12 h-12
             rounded-full
-            bg-red-50
-            text-red-500
+            bg-danger-tint
+            text-danger
           "
         >
           <AlertCircleIcon className="w-6 h-6" />
         </span>
 
-        <h1 className="mt-4 text-2xl font-bold leading-tight text-slate-800">
+        <h1 className="mt-4 text-2xl font-bold leading-tight text-ink">
           {isInvalid ? 'This link no longer works' : "We couldn't check your link"}
         </h1>
 
-        <p className="mt-2 text-sm leading-relaxed text-gray-600">
+        <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
           {isInvalid
             ? 'Reset links work once and expire after 30 minutes. Request a new one and use it straight away.'
             : 'The server could not be reached. Check your connection and try again.'}
@@ -234,11 +234,11 @@ function TeacherResetPassword() {
 
   return (
     <AuthPageShell>
-      <h1 className="text-2xl font-bold leading-tight text-slate-800 sm:text-3xl">
+      <h1 className="text-2xl font-bold leading-tight text-ink sm:text-3xl">
         Choose a new password
       </h1>
 
-      <p className="mt-2 text-sm leading-relaxed text-gray-600">
+      <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
         Use at least {MIN_PASSWORD_LENGTH} characters. You'll be signed out on all devices and can
         sign in again with the new password.
       </p>
@@ -250,14 +250,14 @@ function TeacherResetPassword() {
             flex items-start gap-2.5
             mt-5 px-4 py-3
 
-            bg-red-50
-            border border-red-200
+            bg-danger-tint
+            border border-danger/30
             rounded-lg
 
-            text-sm text-red-700
+            text-sm text-danger
           "
         >
-          <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+          <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-danger" />
           <span>{submitError}</span>
         </div>
       )}

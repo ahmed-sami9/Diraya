@@ -31,7 +31,7 @@ export default function FeatureItem({ icon, alt, title, description }: Feature) 
     <div
       className="
         flex w-full items-center gap-3
-        rounded-xl border border-gray-200 bg-white
+        rounded-xl border border-border bg-surface
         px-4 py-2.5
         lg:items-start lg:border-0 lg:bg-transparent lg:py-0
       "
@@ -52,8 +52,8 @@ export default function FeatureItem({ icon, alt, title, description }: Feature) 
       </div>
 
       <div className="min-w-0">
-        <p className="whitespace-nowrap text-[15px] font-bold text-[#18134a]">{title}</p>
-        <p className="mt-0.5 text-[13px] leading-snug text-slate-600">{description}</p>
+        <p className="whitespace-nowrap text-[15px] font-bold text-ink">{title}</p>
+        <p className="mt-0.5 text-[13px] leading-snug text-ink-secondary">{description}</p>
       </div>
     </div>
   );

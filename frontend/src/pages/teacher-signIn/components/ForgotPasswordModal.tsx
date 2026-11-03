@@ -165,7 +165,7 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
           w-full max-w-[440px]
           overflow-hidden
 
-          bg-white
+          bg-surface
           rounded-lg
           shadow-xl
           px-6 py-8
@@ -192,16 +192,16 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
             w-8 h-8
             rounded-md
 
-            text-gray-400
+            text-ink-muted
             cursor-pointer
             transition-colors
 
-            hover:text-gray-600
-            hover:bg-gray-100
+            hover:text-ink-secondary
+            hover:bg-surface-hover
 
             focus-visible:outline-none
             focus-visible:ring-2
-            focus-visible:ring-[#3431E4]
+            focus-visible:ring-primary
 
             disabled:opacity-40
             disabled:cursor-not-allowed
@@ -221,8 +221,8 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
                 flex items-center justify-center
                 w-14 h-14
                 rounded-full
-                bg-emerald-50
-                text-emerald-600
+                bg-success-tint
+                text-success
 
                 transition-transform duration-500
                 starting:scale-50
@@ -234,18 +234,18 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
 
             <h2
               id="forgot-password-title"
-              className="mt-4 text-2xl font-bold text-slate-800"
+              className="mt-4 text-2xl font-bold text-ink"
             >
               Check your inbox
             </h2>
 
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
               If an account exists for{' '}
-              <span className="font-semibold text-slate-800 break-all">{email.trim()}</span>, we've
+              <span className="font-semibold text-ink break-all">{email.trim()}</span>, we've
               sent a link to reset your password. It expires in 30 minutes.
             </p>
 
-            <p className="mt-3 text-xs text-gray-500">This window will close by itself.</p>
+            <p className="mt-3 text-xs text-ink-muted">This window will close by itself.</p>
 
             {/* Thin bar that empties while the message is visible, so the
                 automatic close is expected and not a surprise. */}
@@ -254,7 +254,7 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
               className="
                 absolute bottom-0 left-0
                 h-1 w-0
-                bg-emerald-500
+                bg-success
 
                 transition-[width] ease-linear duration-[4000ms]
                 starting:w-full
@@ -267,12 +267,12 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
           <>
             <h2
               id="forgot-password-title"
-              className="pr-8 text-2xl font-bold text-slate-800"
+              className="pr-8 text-2xl font-bold text-ink"
             >
               Forgot your password?
             </h2>
 
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
               Enter the email you use for Diraya and we'll send you a link to choose a new
               password.
             </p>
@@ -284,14 +284,14 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
                   flex items-start gap-2.5
                   mt-5 px-4 py-3
 
-                  bg-red-50
-                  border border-red-200
+                  bg-danger-tint
+                  border border-danger/30
                   rounded-lg
 
-                  text-sm text-red-700
+                  text-sm text-danger
                 "
               >
-                <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+                <AlertCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-danger" />
                 <span>{requestError}</span>
               </div>
             )}
@@ -331,7 +331,7 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
                   flex items-center justify-center gap-2
                   px-6
 
-                  bg-[#3431E4]
+                  bg-primary-solid
                   text-white
                   text-sm
                   font-semibold
@@ -342,19 +342,19 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
                   cursor-pointer
                   transition-all duration-200
 
-                  hover:bg-[#2926C2]
+                  hover:bg-primary-hover
                   hover:shadow-md
 
                   active:scale-[0.995]
 
                   focus-visible:outline-none
                   focus-visible:ring-2
-                  focus-visible:ring-[#3431E4]
-                  focus-visible:ring-offset-2
+                  focus-visible:ring-primary
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
                   disabled:cursor-not-allowed
                   disabled:opacity-80
-                  disabled:hover:bg-[#3431E4]
+                  disabled:hover:bg-primary-solid
                   disabled:hover:shadow-sm
 
                   xl:h-[46px]
@@ -381,18 +381,18 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
 
                 text-sm
                 font-semibold
-                text-[#3431E4]
+                text-primary
 
                 cursor-pointer
                 transition-colors
 
-                hover:text-[#2926C2]
+                hover:text-primary-hover
                 hover:underline
 
                 focus-visible:outline-none
                 focus-visible:ring-2
-                focus-visible:ring-[#3431E4]
-                focus-visible:ring-offset-2
+                focus-visible:ring-primary
+                focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 
                 rounded-sm
 

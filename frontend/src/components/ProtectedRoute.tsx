@@ -7,7 +7,7 @@ type ProtectedRouteProps = {
 };
 
 function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
-  const { user, isAuthChecking, authCheckError, retryAuthCheck } = useAuth();
+  const { user, isAuthChecking, authCheckError, retryAuthCheck, signedOutByUser } = useAuth();
 
   const location = useLocation();
 
@@ -36,9 +36,9 @@ function ProtectedRoute({ allowedRole }: ProtectedRouteProps) {
       <Navigate
         to="/teacher/sign-in"
         replace
-        state={{
-          from: location.pathname + location.search,
-        }}
+        // Remember the page only when the session ended by itself; after
+        // "Sign out", the next sign-in starts at home.
+        state={signedOutByUser ? null : { from: location.pathname + location.search }}
       />
     );
   }
