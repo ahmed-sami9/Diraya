@@ -1,8 +1,5 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import { z } from 'zod';
-
-dotenv.config();
 
 const JWT_ISSUER = 'diraya';
 const JWT_AUDIENCE = 'diraya-api';

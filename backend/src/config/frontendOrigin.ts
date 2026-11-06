@@ -6,6 +6,7 @@
 export function getFrontendOrigin(): string {
   return new URL(
     process.env.FRONTEND_ORIGIN ??
-      (process.env.NODE_ENV === 'production' ? 'https://diraya.vercel.app' : 'http://localhost:5173')
+      // Local default only: production must set it (checked in env.ts at start-up).
+      'http://localhost:5173'
   ).origin;
 }

@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 
 import { errorHandler, notFoundHandler } from './middlware/errorHandler';
@@ -8,8 +7,6 @@ import { getFrontendOrigin } from './config/frontendOrigin';
 
 import authRoutes from './modules/auth/auth.routes';
 import teacherRoutes from './modules/teacher/teacher.routes';
-
-dotenv.config();
 
 const app = express();
 
