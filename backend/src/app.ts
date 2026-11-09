@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 
 import { errorHandler, notFoundHandler } from './middlware/errorHandler';
 import { getFrontendOrigin } from './config/frontendOrigin';
+import { pool } from './config/db';
 
 import authRoutes from './modules/auth/auth.routes';
 import teacherRoutes from './modules/teacher/teacher.routes';
@@ -50,6 +51,21 @@ app.use('/api/v1', (req, res, next) => {
   }
 
   next();
+});
+
+// For the host's health check: 200 only while the server AND the database work,
+// so a server that lost its database is restarted instead of serving errors.
+app.get('/api/v1/health', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ok' });
+  } catch {
+    res
+      .status(503)
+      .json({ code: 'DATABASE_UNAVAILABLE', message: 'The database is not reachable.' });
+  }
 });
 
 app.use('/api/v1/auth', authRoutes);

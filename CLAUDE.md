@@ -71,27 +71,28 @@ Educational management system for private teachers in Egypt (grades, groups, stu
 
 ## Tests
 - Backend: `npm test` in `backend/` (node:test + tsx, real database `diraya_test_db` from `.env.test`; `assertTestDatabase` refuses any other DB). Run `npm run migrate:test` after adding a migration.
-- Covered: exams, payments (repository + API), account/settings (API + repository race guard). 174 tests as of 24 Oct 2026.
-- Not covered yet: grades, groups, students, attendance, auth. Frontend has no test runner; first frontend test planned = one Playwright end-to-end flow before deploy.
+- Covered (API tests): every module, including attendance, grades and auth. `src/test/api.ts` has the shared test server and signed-in teacher helpers. `src/config/env.test.ts` covers the start-up settings check. 376 tests as of 8 Nov 2026.
+- Frontend: `npm test` in `frontend/` (node:test) for pure logic only (utils, helpers): 83 tests. Planned: one Playwright end-to-end flow against the live site after deploy.
+- `auth.api.test.ts` shares one rate limiter per file: the email limiter allows 5 requests per 15 minutes, so new forgot-password or resend tests go in a new file.
 
-## Status (24 Oct 2026)
-Done: auth (password, Google, demo, reset, email verification), grades, groups, students + profile, attendance, exams & marks, payments, Settings v1 (profile, password change that signs out other sessions, appearance/theme).
+## Status (8 Nov 2026)
+Done: auth (password, Google, demo, reset, email verification), grades, groups (timetables, student order), students + profile (WhatsApp/PDF parent reports), attendance, exams & marks, payments, notes, recent activity, Overview page, Settings v1 (profile, password change that signs out other sessions, appearance/theme), theme toggle on the sign-in pages. Pre-launch fixes: `.env` read only in `server.ts`, settings validated at start-up (`config/env.ts`), `GET /api/v1/health`, idle DB connection handler, 404 page, WebP sign-in images, page title and preview tags.
 
 ## Ship plan (in this order; anything not listed goes to "v2 ideas")
-1. Deploy blockers: `api/auth/getCurrentUser.ts` hard-codes `http://localhost:5000` (use `VITE_API_URL`); make `npm run build` pass (e.g. unused `import React` in `EyeIcon.tsx`); production env vars, CORS origin, cookie settings.
-2. Demo template: rich seed data (grades, groups, students, attendance, exams + marks, payments) so the demo shows every feature and the charts.
-3. Integration pass: click through grade → students → attendance → exam → marks → payments; fix bugs only.
-4. Deploy frontend, backend and database; run migrations in production.
-5. README (what it is, screenshots/GIF, stack, architecture, tests, how to run, live link) + portfolio page entry.
+1. ~~Deploy blockers in the code~~ (done: API URL from `VITE_API_URL`, build passes, env checked at start-up).
+2. ~~Demo template~~ (done: every feature has seed data).
+3. ~~Integration pass~~ (done 3 Nov: every page clicked through on desktop and phone).
+4. Deploy: buy the domain; frontend and API on subdomains of it (same site, so the `SameSite=Lax` cookie works); SPA rewrite to `index.html`; production env vars; `npm run migrate up` on the production DB; Google authorized origin; Resend domain verification; add `og:image` with the live URL. Build with `npm ci --include=dev && npm run build` (tsc is a devDependency).
+5. README is written: fill in the live-demo and case-study links; commit `docs/screenshots/`. Then the portfolio page entry (demo + repo links, status "live").
 6. Resume, then apply for jobs while building the second project (Circles).
 
 ## Known issues / small cleanups
 - Focus moved to a disabled input after a server error in dialogs (e.g. `GradeFormDialog`); fix with the `focusAfterSave` pattern from `PasswordCard`.
 - Egyptian phone rule duplicated in students + account validation; could share one schema.
-- `components/icons/TeacherSidebar.tsx` and `components/icons/TeacherNavbar.tsx` look like unused old copies.
 - `SectionCard` lives in `students/profile/components` but is shared; belongs in `components/`.
-- Icons with hard-coded colours (`EyeIcon`, `AlertCircleIcon`) and `LockIcon` with kebab-case SVG attributes.
+- Icons with hard-coded colours: `AlertCircleIcon`, `EyeIcon`, `LockIcon`, `MailIcon`.
 - `frontend/Structure & Design.md` still describes the deleted `AddExamDialog`.
+- `handleLogout` in `TeacherDashboardLayout` still calls `navigate('/teacher/sign-in')`; redundant since `ProtectedRoute` redirects on sign-out.
 
 ## v2 ideas (after the job search starts)
 Dark-mode pass (sign-in pages are not tokenised), student/parent portal, Arabic + RTL, photo upload, "sign out other devices" button, Teaching defaults settings (default pass mark %, attendance edit lock), frontend unit tests (Vitest).

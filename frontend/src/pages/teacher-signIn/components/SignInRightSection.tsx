@@ -274,7 +274,7 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
         "
       >
         <img
-          src="/teacher-signInPage-illustrator.png"
+          src="/teacher-signInPage-illustrator.webp"
           alt="Illustrated preview of the Diraya teacher management dashboard"
           draggable={false}
           className="

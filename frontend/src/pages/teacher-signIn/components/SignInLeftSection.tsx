@@ -354,7 +354,7 @@ function SignInLeftSection({
           "
         >
           <img
-            src="/teacher-welcome-illustration.png"
+            src="/teacher-welcome-illustration.webp"
             alt=""
             aria-hidden="true"
             className="

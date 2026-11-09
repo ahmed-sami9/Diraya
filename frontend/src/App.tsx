@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import TeacherSignIn from './pages/teacher-signIn/TeacherSignIn';
 import TeacherResetPassword from './pages/teacher-reset-password/TeacherResetPassword';
 import TeacherVerifyEmail from './pages/teacher-verify-email/TeacherVerifyEmail';
+import StatusPage from './components/StatusPage';
 
 import TeacherDashboardLayout from './pages/teacher-dashboard/TeacherDashboardLayout';
 import TeacherHomePage from './pages/teacher-dashboard/home/TeacherHomePage';
@@ -197,7 +198,25 @@ function App() {
       {/* Wrong role */}
       <Route
         path="/unauthorized"
-        element={<div>You don't have permission to access this page.</div>}
+        element={
+          <StatusPage
+            code="403"
+            title="This page isn’t for your account"
+            message="You’re signed in, but this part of Diraya belongs to a different kind of account."
+          />
+        }
+      />
+
+      {/* Last: any address no route above matches. */}
+      <Route
+        path="*"
+        element={
+          <StatusPage
+            code="404"
+            title="Page not found"
+            message="This address doesn’t lead anywhere in Diraya. It may have been mistyped, or the page has moved."
+          />
+        }
       />
     </Routes>
   );
