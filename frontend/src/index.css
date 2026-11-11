@@ -59,6 +59,13 @@
     @slot;
   }
 }
+/* Laptop screens like 1280x720: tighter spacing so the sign-in page fits without
+   scrolling. Below 720px it stops squeezing: normal sizes, and the page scrolls. */
+@custom-variant short {
+  @media (min-width: 1024px) and (min-height: 720px) and (max-height: 820px) {
+    @slot;
+  }
+}
 @media (min-width: 1466px) {
   .features-row {
     display: grid;

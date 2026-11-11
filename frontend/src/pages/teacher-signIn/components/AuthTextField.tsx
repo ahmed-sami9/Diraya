@@ -1,4 +1,10 @@
-import { useState, type ComponentType, type InputHTMLAttributes, type Ref } from 'react';
+import {
+  useState,
+  type ComponentType,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { EyeIcon } from '../../../components/icons/index';
 
 interface AuthTextFieldProps
@@ -7,7 +13,10 @@ interface AuthTextFieldProps
   label: string;
   // Pass the icon component itself (icon={MailIcon}), not an element.
   icon: ComponentType<{ className?: string }>;
-  error?: string;
+  // Usually text; can hold a button too ("Sign in instead").
+  error?: ReactNode;
+  // "alert": screen readers announce the error the moment it appears.
+  errorRole?: 'alert';
   // Classes for the outer wrapper, used for the spacing between fields.
   className?: string;
   // Lets a parent reach the <input>, for example to focus it. It is not
@@ -29,6 +38,7 @@ function AuthTextField({
   label,
   icon: Icon,
   error,
+  errorRole,
   className = '',
   type = 'text',
   disabled,
@@ -124,6 +134,7 @@ function AuthTextField({
       {error && (
         <p
           id={errorId}
+          role={errorRole}
           className="text-xs text-danger mt-1.5 pl-1"
         >
           {error}

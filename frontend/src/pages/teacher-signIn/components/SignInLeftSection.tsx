@@ -9,6 +9,8 @@ import type { User } from '../../../context/AuthContext';
 import { AuthError } from '../../../api/auth/authErrors';
 import { googleLoginRequest } from '../../../api/auth/googleAuth';
 import { resendVerificationEmail } from '../../../api/auth/emailVerification.ts';
+import { emailError } from '../../../utils/authFormRules.ts';
+import { waitForMinimumLoading } from '../../../utils/minimumDelay.ts';
 
 import AuthTextField from './AuthTextField.tsx';
 import SignInAlternatives from './SignInAlternatives.tsx';
@@ -33,32 +35,16 @@ type FieldErrors = Partial<Record<FieldName, string>>;
 // Same key TeacherSignIn uses to decide which section opens first.
 const HAS_VISITED_KEY = 'diraya_hasVisited';
 
-const MIN_LOADING_MS = 400;
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
-
-// Keeps the loading state on screen long enough to avoid a flicker.
-const waitForMinimumLoading = (startedAt: number) => {
-  const remaining = MIN_LOADING_MS - (Date.now() - startedAt);
-
-  return remaining > 0
-    ? new Promise<void>((resolve) => setTimeout(resolve, remaining))
-    : Promise.resolve();
-};
 
 // Returns an empty object when both fields are valid.
 const validateFields = (email: string, password: string): FieldErrors => {
   const errors: FieldErrors = {};
 
-  if (!email.trim()) {
-    errors.email = 'Email is required';
-  } else if (!EMAIL_PATTERN.test(email)) {
-    errors.email = 'Enter a valid email';
-  }
+  const emailProblem = emailError(email);
+  if (emailProblem) errors.email = emailProblem;
 
   if (!password) {
     errors.password = 'Password is required';
@@ -307,6 +293,8 @@ function SignInLeftSection({
         lg:px-6
         lg:pt-20
         lg:pb-8
+        short:pt-[76px]
+        short:pb-5
         lg:bg-surface
         lg:rounded-3xl
         lg:shadow-lg
@@ -382,6 +370,7 @@ function SignInLeftSection({
               sm:text-3xl
               lg:mt-0
               lg:text-4xl
+              short:text-[32px]
               lg:text-left
             "
           >
@@ -495,6 +484,7 @@ function SignInLeftSection({
             md:w-[90%]
             lg:mt-10
             tall:mt-12
+            short:mt-6
           "
         >
           <AuthTextField
@@ -513,7 +503,7 @@ function SignInLeftSection({
           />
 
           <AuthTextField
-            className="mt-5 lg:mt-7 tall:mt-9"
+            className="mt-5 lg:mt-7 tall:mt-9 short:mt-5"
             id="password"
             label="Password"
             icon={LockIcon}
@@ -631,7 +621,7 @@ function SignInLeftSection({
                   <span aria-live="polite">Signing in...</span>
                 </>
               ) : (
-                'Sign In'
+                'Sign in'
               )}
             </button>
           </div>
@@ -643,7 +633,10 @@ function SignInLeftSection({
           isDemoLoading={isDemoLoading}
           isGoogleSubmitting={isGoogleSubmitting}
           demoError={demoError}
-          onSignUp={onSignUp}
+          switchPrompt="Don't have an account?"
+          switchLabel="Sign up"
+          onSwitch={onSignUp}
+          delaySwitch
           onTryDemo={handleTryDemo}
           onGoogleCode={handleGoogleCode}
           onGoogleError={handleGoogleError}

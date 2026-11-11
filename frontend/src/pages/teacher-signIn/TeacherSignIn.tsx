@@ -132,7 +132,7 @@ const TeacherSignIn = () => {
         lg:items-stretch
         lg:bg-primary-tint
         lg:pb-0
-        lg:overflow-x-visible
+        lg:overflow-x-clip
       "
     >
       {/* Top bar: logo plus the small-screen toggle for the sign-in form */}
@@ -221,7 +221,7 @@ const TeacherSignIn = () => {
               }
             `}
           >
-            {isLoggingIn ? <CloseIcon /> : 'Sign In'}
+            {isLoggingIn ? <CloseIcon /> : 'Sign in'}
           </button>
         </div>
       </div>
@@ -237,7 +237,7 @@ const TeacherSignIn = () => {
       <SignInRightSection
         isOpen={isLoggingIn}
         onSignIn={openLogin}
-        onSignUp={openSignUp}
+        onAuthSuccess={handleAuthSuccess}
       />
 
       <SignUpModal

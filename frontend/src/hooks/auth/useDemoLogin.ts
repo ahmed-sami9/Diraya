@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { demoLoginRequest } from '../../api/auth/demoLogin';
 import type { User } from '../../context/AuthContext';
-
-// Keeps the loading state on screen long enough to avoid a flicker.
-const MIN_LOADING_MS = 400;
+import { waitForMinimumLoading } from '../../utils/minimumDelay';
 
 // "Try the demo". Used by both the sign-in section and the sign-up window.
 //
@@ -36,19 +34,15 @@ function useDemoLogin(onAuthSuccess: (user: User) => void) {
     setIsDemoLoading(true);
 
     const startedAt = Date.now();
-    const waitForMinimum = () => {
-      const remaining = MIN_LOADING_MS - (Date.now() - startedAt);
-      return new Promise<void>((resolve) => setTimeout(resolve, Math.max(remaining, 0)));
-    };
 
     try {
       const user = await demoLoginRequest();
 
-      await waitForMinimum();
+      await waitForMinimumLoading(startedAt);
       onAuthSuccess(user);
     } catch (error) {
       console.error(error);
-      await waitForMinimum();
+      await waitForMinimumLoading(startedAt);
 
       // demoLoginRequest only throws messages written for users (for example
       // the "too many attempts" one), so they are safe to show.

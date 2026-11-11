@@ -2,6 +2,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useRetry } from '../hooks/useRetry';
 import { CONNECTION_COPY } from '../utils/connectionProblem';
 
+import DirayaMark from './DirayaMark';
 import RefreshIcon from './icons/RefreshIcon';
 
 type ConnectionErrorProps = {
@@ -28,17 +29,7 @@ function ConnectionError({ onRetry }: ConnectionErrorProps) {
       {/* Brand. A label, not a heading: the heading is the message below. */}
       <header className="absolute left-6 top-6 sm:left-10 sm:top-8 lg:left-14 lg:top-10">
         <div className="flex items-center gap-3">
-          {/* Dark mark on the light theme, light mark on the dark theme. */}
-          <img
-            src="/diraya-logo-dark.png"
-            alt=""
-            className="h-auto w-10 dark:hidden sm:w-11"
-          />
-          <img
-            src="/diraya-logo-light.png"
-            alt=""
-            className="hidden h-auto w-10 dark:block sm:w-11"
-          />
+          <DirayaMark className="h-10 w-10 text-primary-solid dark:text-white sm:h-11 sm:w-11" />
 
           <div>
             <p className="text-lg font-bold leading-tight text-ink sm:text-xl">Diraya</p>

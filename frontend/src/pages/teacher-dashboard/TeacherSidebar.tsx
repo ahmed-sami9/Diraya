@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
+import DirayaMark from '../../components/DirayaMark';
 import { LogoutIcon, CloseIcon } from '../../components/icons/index.ts';
 
 import { getActiveIndex, navItems } from './teacherNav';
@@ -88,11 +89,8 @@ function TeacherSidebar({
           onClick={onClose}
           className={`flex items-center gap-3 rounded-md text-white ${focusRing}`}
         >
-          <img
-            src="/diraya-logo-light.png"
-            alt=""
-            className="h-9 w-auto"
-          />
+          {/* White, from the link's text-white: the sidebar is dark in both themes. */}
+          <DirayaMark className="h-9 w-9" />
           <span className="flex flex-col gap-0.5">
             <span className="text-xl font-bold leading-none">Diraya</span>
             <span className="text-[11px] leading-tight text-white/70">

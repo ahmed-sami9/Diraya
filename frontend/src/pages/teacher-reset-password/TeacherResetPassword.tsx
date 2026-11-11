@@ -6,6 +6,8 @@ import PencilLoader from '../../components/PencilLoader.tsx';
 import AuthPageShell from '../../components/AuthPageShell.tsx';
 import { primaryButtonClasses, textLinkClasses } from '../../components/authPageClasses.ts';
 import { useAuth } from '../../context/AuthContext';
+import { PASSWORD_LENGTH, newPasswordError } from '../../utils/authFormRules.ts';
+import { waitForMinimumLoading } from '../../utils/minimumDelay.ts';
 import {
   verifyResetToken,
   resetPassword,
@@ -30,11 +32,6 @@ type FieldErrors = Partial<Record<FieldName, string>>;
 
 const SIGN_IN_PATH = '/teacher/sign-in';
 
-// Same rule as sign-up and as the backend.
-const MIN_PASSWORD_LENGTH = 8;
-
-// Keeps the loading state on screen long enough to avoid a flicker.
-const MIN_LOADING_MS = 400;
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -43,11 +40,8 @@ const MIN_LOADING_MS = 400;
 const validateFields = (password: string, confirmPassword: string): FieldErrors => {
   const errors: FieldErrors = {};
 
-  if (!password) {
-    errors.password = 'Password is required';
-  } else if (password.length < MIN_PASSWORD_LENGTH) {
-    errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
-  }
+  const passwordProblem = newPasswordError(password);
+  if (passwordProblem) errors.password = passwordProblem;
 
   if (confirmPassword !== password) {
     errors.confirmPassword = 'Passwords do not match';
@@ -122,15 +116,11 @@ function TeacherResetPassword() {
     setIsSubmitting(true);
 
     const startedAt = Date.now();
-    const waitForMinimumLoading = () =>
-      new Promise<void>((resolve) =>
-        setTimeout(resolve, Math.max(MIN_LOADING_MS - (Date.now() - startedAt), 0))
-      );
 
     try {
       await resetPassword(token, password);
 
-      await waitForMinimumLoading();
+      await waitForMinimumLoading(startedAt);
 
       // The server ended every session for this account, so make sure the
       // app agrees that nobody is signed in on this browser.
@@ -144,7 +134,7 @@ function TeacherResetPassword() {
     } catch (error) {
       console.error(error);
 
-      await waitForMinimumLoading();
+      await waitForMinimumLoading(startedAt);
 
       if (error instanceof InvalidResetLinkError) {
         // The link died between opening the page and submitting.
@@ -239,7 +229,7 @@ function TeacherResetPassword() {
       </h1>
 
       <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
-        Use at least {MIN_PASSWORD_LENGTH} characters. You'll be signed out on all devices and can
+        Use at least {PASSWORD_LENGTH.min} characters. You'll be signed out on all devices and can
         sign in again with the new password.
       </p>
 

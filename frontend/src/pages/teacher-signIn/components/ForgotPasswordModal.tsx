@@ -5,6 +5,8 @@ import CheckCircleIcon from '../../../components/icons/CheckCircleIcon.tsx';
 import PencilLoader from '../../../components/PencilLoader.tsx';
 import useModalBehavior from '../../../hooks/useModalBehavior.ts';
 import { requestPasswordReset } from '../../../api/auth/passwordReset.ts';
+import { emailError as checkEmail } from '../../../utils/authFormRules.ts';
+import { waitForMinimumLoading } from '../../../utils/minimumDelay.ts';
 
 import AuthTextField from './AuthTextField.tsx';
 
@@ -25,10 +27,7 @@ const SUCCESS_VISIBLE_MS = 4000;
 // How long the fade-out takes. Must match the `duration-500` classes below.
 const FADE_OUT_MS = 500;
 
-// Keeps the loading state on screen long enough to avoid a flicker.
-const MIN_LOADING_MS = 400;
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // The window moves through these steps in order:
 //   form -> sending -> success -> closing -> (removed by the parent)
@@ -94,14 +93,10 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
     if (phase !== 'form') return;
 
     const trimmedEmail = email.trim();
+    const emailProblem = checkEmail(trimmedEmail);
 
-    if (!trimmedEmail) {
-      setEmailError('Email is required');
-      return;
-    }
-
-    if (!EMAIL_PATTERN.test(trimmedEmail)) {
-      setEmailError('Enter a valid email');
+    if (emailProblem) {
+      setEmailError(emailProblem);
       return;
     }
 
@@ -109,22 +104,18 @@ function ForgotPasswordModal({ initialEmail, onClose }: ForgotPasswordModalProps
     setPhase('sending');
 
     const startedAt = Date.now();
-    const waitForMinimumLoading = () =>
-      new Promise<void>((resolve) =>
-        setTimeout(resolve, Math.max(MIN_LOADING_MS - (Date.now() - startedAt), 0))
-      );
 
     try {
       await requestPasswordReset(trimmedEmail);
 
-      await waitForMinimumLoading();
+      await waitForMinimumLoading(startedAt);
 
       setWasSent(true);
       setPhase('success');
     } catch (error) {
       console.error(error);
 
-      await waitForMinimumLoading();
+      await waitForMinimumLoading(startedAt);
 
       // requestPasswordReset only throws messages written for users.
       setRequestError(

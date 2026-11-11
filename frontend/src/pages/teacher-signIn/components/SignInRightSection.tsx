@@ -1,33 +1,12 @@
-import FeatureItem from '../../../components/FeautureItem.tsx';
+import type { User } from '../../../context/AuthContext';
+import useDemoLogin from '../../../hooks/auth/useDemoLogin.ts';
 
 interface SignInRightSectionProps {
   isOpen: boolean;
   onSignIn: () => void;
-  onSignUp: () => void;
+  // For the small-screen "Try the demo" button.
+  onAuthSuccess: (user: User) => void;
 }
-
-const FEATURES = [
-  {
-    icon: '/icons/open-book.png',
-    title: 'All-in-one',
-    description: 'Run everything in one place.',
-  },
-  {
-    icon: '/icons/green-sheild.png',
-    title: 'Safe',
-    description: 'Keep student data protected.',
-  },
-  {
-    icon: '/icons/colorful-insight.png',
-    title: 'Insightful',
-    description: 'See progress at a glance.',
-  },
-  {
-    icon: '/icons/orange-clock.png',
-    title: 'Saves time',
-    description: 'Cut hours of manual work.',
-  },
-];
 
 // Shared by the two small-screen call-to-action buttons.
 const ctaBaseClasses = `
@@ -49,7 +28,9 @@ const ctaBaseClasses = `
   focus-visible:ring-offset-2 focus-visible:ring-offset-surface
 `;
 
-const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionProps) => {
+const SignInRightSection = ({ isOpen, onSignIn, onAuthSuccess }: SignInRightSectionProps) => {
+  const { tryDemo, isDemoLoading, demoError } = useDemoLogin(onAuthSuccess);
+
   return (
     <section
       aria-label="Diraya features"
@@ -96,12 +77,16 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
 
         lg:w-[57%]
         lg:min-h-screen
+        lg:justify-center-safe
         lg:max-w-none
         lg:mt-0
         lg:px-8
         lg:pt-7
         lg:pb-6
         lg:gap-y-6
+        short:pt-5
+        short:pb-4
+        short:gap-y-4
         lg:bg-primary-tint
         lg:rounded-none
 
@@ -166,9 +151,9 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
             xl:text-4xl
           "
         >
-          Everything you need,
+          Run your private lessons,
           <br />
-          in one <span className="text-primary-hover">smart workspace</span>
+          <span className="text-primary-hover">all in one place</span>
         </h2>
 
         <p
@@ -191,11 +176,11 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
             xl:text-[17px]
           "
         >
-          Manage students, track attendance, conduct exams,
+          Students, groups, attendance, exams and payments for private tutors,
           <span className="hidden sm:inline">
             <br />
           </span>{' '}
-          and handle payments &mdash; all in one place.
+          with progress reports that parents get on WhatsApp.
         </p>
 
         {/* Calls to action: small screens only, while the sign-in form is closed */}
@@ -225,47 +210,63 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
                 hover:bg-primary-hover
               `}
             >
-              Sign In
+              Sign in
             </button>
 
+            {/* "Create account" stays one tap away, inside the sign-in form. */}
             <button
               type="button"
-              onClick={onSignUp}
+              onClick={tryDemo}
+              disabled={isDemoLoading}
+              aria-busy={isDemoLoading}
               className={`
                 ${ctaBaseClasses}
 
-                bg-surface
-                text-ink
+                bg-primary-tint
+                text-primary
 
-                border
-                border-border-strong
-
-                hover:bg-surface-hover
-                hover:border-ink-muted/50
+                hover:bg-primary/15
+                disabled:cursor-not-allowed disabled:opacity-60
               `}
             >
-              Create account
+              {isDemoLoading ? 'Loading demo…' : 'Try the demo'}
             </button>
           </div>
+        )}
+
+        {!isOpen && demoError && (
+          <p
+            role="alert"
+            className="mt-3 text-xs font-medium text-danger lg:hidden"
+          >
+            {demoError}
+          </p>
         )}
       </div>
 
       {/* Main dashboard illustration */}
+      {/* Small screens: same width box as the heading, so both start at one line. */}
       <div
         className="
           w-full
-
-          flex
-          items-center
-          justify-center
+          pl-1
 
           mt-7
 
           overflow-visible
 
+          sm:pl-0
+          sm:max-w-[600px]
           sm:mt-8
+
+          md:max-w-[700px]
           md:mt-9
 
+          lg:flex
+          lg:items-center
+          lg:justify-center
+          lg:pl-0
+          lg:max-w-none
           lg:mt-0
 
           xl:justify-start
@@ -273,83 +274,61 @@ const SignInRightSection = ({ isOpen, onSignIn, onSignUp }: SignInRightSectionPr
           xl:ml-[1%]
         "
       >
+        {/* The real Overview page, framed as a browser window: the light one in
+            the light theme, the dark one in the dark theme. width/height keep
+            the space reserved while it loads. Below lg it's widened by the
+            file's transparent shadow, so the frame lines up with the heading. */}
         <img
-          src="/teacher-signInPage-illustrator.webp"
-          alt="Illustrated preview of the Diraya teacher management dashboard"
+          src="/signin-preview-light.webp"
+          alt="Diraya's Overview page: students, today's attendance, papers to mark, payments overdue and today's schedule"
+          width={1718}
+          height={1148}
           draggable={false}
           className="
+            h-auto
             object-contain
             select-none
+            dark:hidden
 
-            dark:brightness-[0.85]
+            w-[107%]
+            max-w-none
+            -ml-[3.6%]
 
-            w-[108%]
-            max-w-[520px]
-            -translate-x-[1.5%]
+            lg:w-full
+            lg:ml-0
+            lg:max-w-[720px]
+            xl:max-w-[860px]
 
-            sm:w-[112%]
-            sm:max-w-[640px]
-
-            md:w-[110%]
-            md:max-w-[720px]
-            md:-translate-x-[1.25%]
-
-            lg:w-[115%]
-            lg:max-w-[730px]
-            lg:translate-x-0
-            lg:-mt-[15px]
-
-            xl:w-[98%]
-            xl:max-w-[780px]
-            xl:-mt-[22px]
+            short:w-auto
+            short:max-h-[calc(100vh-215px)]
           "
         />
-      </div>
+        <img
+          src="/signin-preview-dark.webp"
+          alt="Diraya's Overview page: students, today's attendance, papers to mark, payments overdue and today's schedule"
+          width={1720}
+          height={1164}
+          draggable={false}
+          className="
+            hidden
+            h-auto
+            object-contain
+            select-none
+            dark:block
 
-      {/* Feature items */}
-      <div
-        className="
-          w-full
-          mt-6
-          p-4
+            w-[107%]
+            max-w-none
+            -ml-[3.6%]
 
-          grid
-          grid-cols-1
-          gap-4
+            lg:w-full
+            lg:ml-0
+            lg:max-w-[720px]
+            xl:max-w-[860px]
 
-          sm:grid-cols-2
-          sm:gap-5
-          sm:p-5
-
-          md:max-w-[700px]
-
-          lg:max-w-none
-          lg:mt-3
-          lg:border-t
-          lg:border-primary/15
-          lg:px-0
-          lg:pt-6
-          lg:pb-2
-          lg:gap-10
-
-          xl:grid-cols-4
-          xl:max-w-[950px]
-          xl:mt-0
-          xl:gap-0
-          xl:divide-x
-          xl:divide-primary/15
-          xl:[&>*]:px-5
-        "
-      >
-        {FEATURES.map((feature) => (
-          <FeatureItem
-            key={feature.title}
-            icon={feature.icon}
-            alt=""
-            title={feature.title}
-            description={feature.description}
-          />
-        ))}
+            short:w-auto
+            short:max-h-[calc(100vh-215px)]
+          "
+        />
       </div>
     </section>
   );

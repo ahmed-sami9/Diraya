@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+import DirayaMark from './DirayaMark';
 import { primaryButtonClasses } from './formStyles';
 
 type StatusPageProps = {
@@ -18,16 +19,7 @@ function StatusPage({ code, title, message }: StatusPageProps) {
           to="/teacher"
           className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
         >
-          <img
-            src="/diraya-logo-dark.png"
-            alt=""
-            className="h-auto w-10 dark:hidden"
-          />
-          <img
-            src="/diraya-logo-light.png"
-            alt=""
-            className="hidden h-auto w-10 dark:block"
-          />
+          <DirayaMark className="h-10 w-10 text-primary-solid dark:text-white" />
           <span className="text-lg font-bold text-ink sm:text-xl">Diraya</span>
         </Link>
       </header>

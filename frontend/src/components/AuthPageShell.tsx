@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import DirayaMark from './DirayaMark';
 import ThemeToggle from './ThemeToggle';
 
 // The frame shared by the standalone auth pages: tinted background, the
@@ -32,19 +33,7 @@ function AuthPageShell({ children }: { children: ReactNode }) {
         "
       >
         <div className="flex items-center gap-3">
-          {/* The blue logo on light backgrounds, the white one on dark. */}
-          <img
-            src="/diraya-logo-dark.png"
-            alt=""
-            aria-hidden="true"
-            className="w-9 h-9 dark:hidden"
-          />
-          <img
-            src="/diraya-logo-light.png"
-            alt=""
-            aria-hidden="true"
-            className="hidden w-9 h-9 dark:block"
-          />
+          <DirayaMark className="h-9 w-9 text-primary-solid dark:text-white" />
           <span className="text-2xl font-bold leading-none">Diraya</span>
           <ThemeToggle className="ml-auto" />
         </div>
