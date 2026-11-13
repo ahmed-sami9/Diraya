@@ -33,7 +33,7 @@ function ConnectionError({ onRetry }: ConnectionErrorProps) {
 
           <div>
             <p className="text-lg font-bold leading-tight text-ink sm:text-xl">Diraya</p>
-            <p className="mt-0.5 text-xs text-ink-muted">Educational Management System</p>
+            <p className="mt-0.5 text-xs text-ink-muted">For private tutors</p>
           </div>
         </div>
       </header>

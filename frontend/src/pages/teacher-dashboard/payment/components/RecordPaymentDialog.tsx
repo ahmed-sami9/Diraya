@@ -24,8 +24,8 @@ interface RecordPaymentDialogProps {
   grades: { id: string; name: string }[];
   // The grade the page is showing, if any: picked already, still changeable.
   defaultGradeId?: string | null;
-  // Opened from a student's month: start with them and that month.
-  initial?: { studentId: string; month: IsoMonth };
+  // Opened for one student: start with them, and with a month when it's known.
+  initial?: { studentId: string; month?: IsoMonth };
   // After a successful save, so the page can refresh what it shows.
   onRecorded?: () => void;
   onClose: () => void;
@@ -67,7 +67,7 @@ function RecordPaymentDialog({
   const [requestId] = useState(() => crypto.randomUUID());
 
   const [studentId, setStudentId] = useState(initial?.studentId ?? '');
-  const [months, setMonths] = useState<IsoMonth[]>(initial ? [initial.month] : []);
+  const [months, setMonths] = useState<IsoMonth[]>(initial?.month ? [initial.month] : []);
   // null = "follow what the months need". Same idea as the exam's pass mark:
   // derived until the teacher types their own.
   const [customAmount, setCustomAmount] = useState<string | null>(null);

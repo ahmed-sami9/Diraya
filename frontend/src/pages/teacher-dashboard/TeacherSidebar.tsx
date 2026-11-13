@@ -93,9 +93,7 @@ function TeacherSidebar({
           <DirayaMark className="h-9 w-9" />
           <span className="flex flex-col gap-0.5">
             <span className="text-xl font-bold leading-none">Diraya</span>
-            <span className="text-[11px] leading-tight text-white/70">
-              Educational Management System
-            </span>
+            <span className="text-[11px] leading-tight text-white/70">For private tutors</span>
           </span>
         </NavLink>
 

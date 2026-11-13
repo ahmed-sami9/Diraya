@@ -119,9 +119,9 @@ function TeacherDashboardLayout() {
         {/* Changing page. A slow page shows the loader after a short wait;
             a fast page appears with no loader at all. */}
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
-          {/* One width for every page, so a section's content starts at the
-              same place whichever page the teacher opens. */}
-          <div className="mx-auto w-full max-w-[1200px]">
+          {/* One width for every page, kept next to the sidebar: on wide screens
+              the spare space goes to the right, not between nav and content. */}
+          <div className="w-full max-w-[1440px]">
             <Suspense fallback={<PageLoader />}>
               <Outlet />
             </Suspense>

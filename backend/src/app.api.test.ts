@@ -46,6 +46,17 @@ describe('GET /api/v1/health', () => {
   });
 });
 
+describe('security headers', () => {
+  it('every answer carries them, and none says which framework runs', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/health`);
+
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(response.headers.get('x-frame-options'), 'SAMEORIGIN');
+    assert.ok(response.headers.get('strict-transport-security'));
+    assert.equal(response.headers.get('x-powered-by'), null);
+  });
+});
+
 describe('requests the app refuses before any route', () => {
   it('broken JSON: 400 INVALID_JSON, not a 500', async () => {
     const [status, body] = await send('POST', '/api/v1/auth/login', '{"email": ');

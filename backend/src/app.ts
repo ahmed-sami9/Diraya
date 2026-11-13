@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 import { errorHandler, notFoundHandler } from './middlware/errorHandler';
 import { getFrontendOrigin } from './config/frontendOrigin';
@@ -21,6 +22,10 @@ const app = express();
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
+
+// Standard security headers on every answer (no MIME sniffing, no framing,
+// HTTPS only, no "X-Powered-By: Express").
+app.use(helmet());
 
 const frontendOrigin = getFrontendOrigin();
 

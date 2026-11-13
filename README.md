@@ -7,7 +7,6 @@
 
 > **Try it without signing up:** click **Try the demo** on the sign-in page. You get your own temporary teacher account, filled with sample data and deleted after 24 hours.
 
-<!-- Copy the images from ahmed-portfolio/frontend/public/projects/diraya/ into docs/screenshots/ -->
 ![Diraya's teacher overview in the light and the dark theme](docs/screenshots/home-themes.webp)
 
 ---
@@ -151,7 +150,7 @@ npm test --prefix frontend
 ```
 
 <!-- Update the numbers when they change -->
-About 300 backend tests cover the API and the repositories: permissions (another teacher's data), validation, business rules and database constraints.
+About 380 backend tests cover the API and the repositories: permissions (another teacher's data), validation, business rules and database constraints. About 90 frontend tests cover the pure logic.
 
 ## Project structure
 
@@ -161,7 +160,7 @@ Diraya/
 │   ├── migrations/          # versioned schema changes (node-pg-migrate)
 │   ├── server.ts            # starts the server
 │   └── src/
-│       ├── app.ts           # Express app: CORS, CSRF check, routes, errors
+│       ├── app.ts           # Express app: security headers, CORS, CSRF check, routes, errors
 │       ├── middlware/       # validation and error handling
 │       └── modules/         # one folder per feature: routes, validation, controller, service, repository
 └── frontend/

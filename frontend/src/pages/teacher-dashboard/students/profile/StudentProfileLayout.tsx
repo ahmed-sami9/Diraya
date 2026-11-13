@@ -9,6 +9,8 @@ import { deleteStudent } from '../../../../api/students/profile';
 import { useStudentProfile } from '../../../../hooks/students/useStudentProfile';
 import { todayInCairo } from '../../../../utils/cairoDate';
 
+import RecordPaymentDialog from '../../payment/components/RecordPaymentDialog';
+
 import DeleteStudentDialog from './components/DeleteStudentDialog';
 import EditStudentDialog from './components/EditStudentDialog';
 import ProfileHeader from './components/ProfileHeader';
@@ -40,6 +42,7 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
   const [isSharing, setIsSharing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const navigate = useNavigate();
   const [reportStatus, setReportStatus] = useState<'idle' | 'working' | 'failed'>('idle');
 
@@ -70,7 +73,7 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
   };
 
   // What each button does. Notes and Retry go to the server (through the
-  // hook), Share opens its dialog; the rest open dialogs that aren't built yet.
+  // hook); the rest open their dialogs.
   const actions: ProfileActions = {
     addNote,
     retry: reload,
@@ -78,8 +81,7 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
     deleteStudent: () => setIsConfirmingDelete(true),
     shareWithParent: () => setIsSharing(true),
     downloadReport,
-    // TODO(dialog): Record payment (POST /teacher/students/:studentId/payments)
-    recordPayment: () => console.info('TODO: open the Record payment dialog'),
+    recordPayment: () => setIsRecordingPayment(true),
   };
 
   const linkClasses =
@@ -186,6 +188,18 @@ function StudentProfileContent({ studentId }: { studentId: string }) {
                 navigate(`/teacher/students/grades/${gradeId}`, { replace: true });
               }}
               onClose={() => setIsConfirmingDelete(false)}
+            />
+          )}
+
+          {/* The payments page's dialog, started on this student. Reloading
+              afterwards updates the fee tile and the payments list together. */}
+          {isRecordingPayment && (
+            <RecordPaymentDialog
+              grades={[state.data.profile.grade]}
+              defaultGradeId={state.data.profile.grade.id}
+              initial={{ studentId }}
+              onRecorded={reload}
+              onClose={() => setIsRecordingPayment(false)}
             />
           )}
 

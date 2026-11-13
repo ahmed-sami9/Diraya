@@ -66,7 +66,7 @@ function TeacherNavbar({ teacherName, onOpenSidebar }: TeacherNavbarProps) {
       {/* The same width as the page content below, so their edges line up. */}
       <header
         className="
-          mx-auto flex min-h-[76px] w-full max-w-[1200px] flex-wrap items-center gap-3
+          flex min-h-[76px] w-full max-w-[1440px] flex-wrap items-center gap-3
           rounded-2xl border border-primary/15 bg-primary-tint
           px-4 py-3
           sm:px-6
